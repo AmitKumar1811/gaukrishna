@@ -34,30 +34,35 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background">
+    <header className="sticky top-0 z-50 w-full bg-white shadow-sm">
       {/* Top promo banner */}
-      <div className="bg-[#1a5f48] text-primary-foreground py-2 text-center text-xs sm:text-sm font-medium">
+      <div className="bg-[#0f6845] text-primary-foreground py-2 text-center text-xs sm:text-sm font-semibold">
         Pure Desi Ghee & Oils At 15% OFF | Use Code: PURE15
       </div>
 
       {/* Main navbar */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between gap-4">
-          {/* Mobile Menu Button (Left) */}
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="lg:hidden p-2 hover:bg-muted rounded-lg transition-colors"
-            aria-label="Menu"
-          >
-            <Menu className="h-6 w-6 text-foreground" />
-          </button>
+          {/* Left section: Menu + Logo */}
+          <div className="flex items-center gap-2 md:gap-4">
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="Menu"
+            >
+              <Menu className="h-6 w-6 text-[#1a5f48]" />
+            </button>
 
-          {/* Logo */}
-          <Link href="/" className="flex-shrink-0 flex items-center gap-2">
-            <span className="font-serif text-2xl sm:text-3xl font-bold text-[#1a5f48]">
-              Gau Krishna.
-            </span>
-          </Link>
+            {/* Logo */}
+            {/* Logo */}
+            <Link href="/" className="shrink-0 group">
+              <h1 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight flex items-center gap-1">
+                <span className="text-[#1a5f48]">Gau</span>
+                <span className="text-[#c59d48]">Krishna</span>
+              </h1>
+            </Link>
+          </div>
 
           {/* Desktop nav */}
           <nav className="hidden lg:flex items-center gap-6 overflow-x-auto no-scrollbar">
@@ -75,7 +80,10 @@ export function Header() {
           {/* Right actions */}
           <div className="flex items-center gap-2 sm:gap-4">
             {isSearchOpen ? (
-              <form onSubmit={handleSearch} className="absolute inset-x-0 top-full bg-white border-b p-4 shadow-lg lg:static lg:block lg:w-auto lg:shadow-none lg:border-none lg:p-0">
+              <form
+                onSubmit={handleSearch}
+                className="absolute inset-x-0 top-full bg-white border-b p-4 shadow-lg lg:static lg:block lg:w-auto lg:shadow-none lg:border-none lg:p-0"
+              >
                 <div className="relative flex items-center">
                   <input
                     type="text"
@@ -97,18 +105,18 @@ export function Header() {
             ) : (
               <button
                 onClick={() => setIsSearchOpen(true)}
-                className="p-2 hover:bg-muted rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 aria-label="Search"
               >
-                <Search className="h-5 w-5 text-foreground" />
+                <Search className="h-5 w-5 text-[#1a5f48]" />
               </button>
             )}
 
-            <Link href="/profile" className="hidden sm:block p-2 hover:bg-muted rounded-lg transition-colors" aria-label="User account">
-              <User className="h-5 w-5 text-foreground" />
+            <Link href="/login" className="hidden sm:block p-2 hover:bg-gray-100 rounded-lg transition-colors" aria-label="Login">
+              <User className="h-5 w-5 text-[#1a5f48]" />
             </Link>
-            <Link href="/cart" className="relative p-2 hover:bg-muted rounded-lg transition-colors" aria-label="Shopping cart">
-              <ShoppingCart className="h-5 w-5 text-foreground" />
+            <Link href="/cart" className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors" aria-label="Shopping cart">
+              <ShoppingCart className="h-5 w-5 text-[#1a5f48]" />
               {totalItems > 0 && (
                 <span className="absolute top-1 right-1 h-4 w-4 bg-[#1a5f48] text-white rounded-full text-[10px] flex items-center justify-center font-bold">
                   {totalItems}

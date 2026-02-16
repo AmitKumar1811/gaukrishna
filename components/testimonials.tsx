@@ -7,28 +7,28 @@ const testimonials = [
   {
     name: 'Minerva Thakur',
     text: 'A variety of ways to use my favourite coconut oil and honey. My skin feels nourished, my cuticles are soft, my lips are smooth, and many other benefits come from using them!',
-    image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+    image: '/placeholder.svg',
     rating: 5,
     role: 'Wellness Enthusiast'
   },
   {
     name: 'Lakshmi Dev',
     text: 'Their ghee helped solve my acid reflux problem. While cooking with wood pressed oils imparts a unique taste and I feel lighter.',
-    image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+    image: '/placeholder.svg',
     rating: 5,
     role: 'Home Chef'
   },
   {
     name: 'Dr Shagun Walia',
     text: 'This ghee is the most healthy option out there for children. I use it regularly for my daughter and she loves the taste.',
-    image: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+    image: '/placeholder.svg',
     rating: 5,
     role: 'Pediatrician'
   },
   {
     name: 'Pankaj Tiwari',
     text: 'Works very well for holistic healing! typical honey. It is very sweet and clean, like nobody\'s business :)',
-    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+    image: '/placeholder.svg',
     rating: 5,
     role: 'Ayurveda Practitioner'
   },
@@ -48,7 +48,7 @@ export function Testimonials() {
   }
 
   return (
-    <section className="py-20 md:py-28 bg-white overflow-hidden">
+    <section className="py-20 md:py-28 bg-[#f9fbf8] overflow-hidden">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
           <div className="max-w-2xl">

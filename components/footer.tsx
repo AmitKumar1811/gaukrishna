@@ -1,46 +1,47 @@
 import Link from 'next/link'
 import { Facebook, Instagram, Mail, Twitter } from 'lucide-react'
 
+const badges = [
+  'ISO 9001:2015',
+  'ISO 22000:2018',
+  'fssai',
+  'FDA',
+  'GMP Certified',
+  'HACCP Certified',
+  'IAF',
+]
+
 export function Footer() {
   return (
-    <footer className="bg-[#1a5f48] text-white mt-10">
+    <footer className="bg-[#0f6845] text-white mt-10">
       {/* Certifications Strip */}
       <div className="bg-white py-8 border-t border-border">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap justify-between items-center gap-8 md:gap-4 opacity-80 grayscale hover:grayscale-0 transition-all duration-500">
-            {/* Placeholders for logos, using text representations or generic icons would be better if real asset URLs aren't available. 
-                 Since I can't upload images easily, I will use text blocks styled to look like badges/logos 
-             */}
-            <div className="flex flex-col items-center">
-              <div className="h-12 w-12 border-2 border-[#1a5f48] rounded-full flex items-center justify-center font-bold text-[#1a5f48]">ISO</div>
-              <span className="text-[10px] text-[#1a5f48] mt-1 font-bold">9001:2015</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <div className="h-12 w-12 border-2 border-[#1a5f48] rounded-full flex items-center justify-center font-bold text-[#1a5f48]">ISO</div>
-              <span className="text-[10px] text-[#1a5f48] mt-1 font-bold">22000:2018</span>
-            </div>
-            <div className="h-8 md:h-10 px-2 border-2 border-[#1a5f48] rounded flex items-center text-[#1a5f48] font-serif font-bold italic">fssai</div>
-            <div className="h-8 md:h-10 px-2 border-2 border-[#1a5f48] rounded flex items-center text-[#1a5f48] font-mono font-bold">FDA</div>
-            <div className="h-12 w-12 border-2 border-[#1a5f48] rounded-full flex items-center justify-center font-bold text-[#1a5f48] text-[10px] text-center p-1">GMP<br />Certified</div>
-            <div className="h-12 w-12 border-2 border-[#1a5f48] rounded-full flex items-center justify-center font-bold text-[#1a5f48] text-[8px] text-center p-1">HACCP<br />Certified</div>
-            <div className="h-12 w-12 border-2 border-[#1a5f48] rounded-full flex items-center justify-center font-bold text-[#1a5f48] text-[10px]">IAF</div>
+          <div className="flex flex-wrap justify-center md:justify-between items-center gap-6 md:gap-8">
+            {badges.map((badge) => (
+              <div
+                key={badge}
+                className="px-4 py-2 border-2 border-[#0f6845] rounded-full text-sm font-semibold text-[#0f6845] bg-white"
+              >
+                {badge}
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 md:py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
-
           {/* Brand & Newsletter */}
           <div className="space-y-6">
             <div className="space-y-4">
-              <h3 className="font-serif text-3xl font-bold">Gau Krishna.</h3>
+              <h3 className="font-serif text-3xl font-bold lowercase">gau krishna</h3>
               <div className="text-sm opacity-90 space-y-1">
-                <p>Corporate Office - Sector 44, Gurugram</p>
-                <p>Registered Office - IMT Manesar, Gurugram</p>
+                <p>Corporate Office - Dhingsara , Fatehabad</p>
+                <p>Registered Office - Main Bus stand Dhingasara</p>
               </div>
               <p className="text-sm opacity-90">
-                Grievance Redressal Officer: <span className="underline cursor-pointer">Suyash Gupta</span>
+                Grievance Redressal Officer: <span className="underline cursor-pointer">Amit Suthar</span>
               </p>
             </div>
 
@@ -50,7 +51,7 @@ export function Footer() {
                 <input
                   type="email"
                   placeholder="Email"
-                  className="flex h-10 w-full rounded-md border border-white/20 bg-[#1a5f48] px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-full rounded-md border border-white/20 bg-[#0f6845] px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </form>
             </div>
@@ -108,10 +109,9 @@ export function Footer() {
               </div>
             </div>
           </div>
-
         </div>
 
-        <div className="border-t border-white/10 mt-16 pt-8 text-center text-xs text-white/60">
+        <div className="border-t border-white/10 mt-16 pt-8 text-center text-xs text-white/70">
           <p>Copyright © 2026, Gau Krishna Farm Technologies Pvt. Ltd.</p>
         </div>
       </div>

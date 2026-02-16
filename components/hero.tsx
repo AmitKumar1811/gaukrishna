@@ -1,54 +1,50 @@
+import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowRight } from 'lucide-react'
+
+// Rebuild trigger
 
 export function Hero() {
   return (
-    <section className="relative w-full h-[85vh] overflow-hidden">
-      {/* Background Image with Zoom Effect */}
-      <div className="absolute inset-0">
-        <img
-          src="/images/slider.webp"
-          alt="Hero Banner"
-          className="w-full h-full object-cover transition-transform duration-[20s] hover:scale-110"
+    <section className="relative w-full bg-[#f8f5f0]">
+      {/* Mobile Banner */}
+      <div className="block md:hidden relative w-full aspect-[390/480]">
+        <Image
+          src="/images/sliders.webp"
+          alt="Gau Krishna Hero Banner"
+          fill
+          priority
+          className="object-cover"
+          sizes="100vw"
         />
-        {/* Dark Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent" />
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
+          <Link
+            href="/products"
+            className="bg-[#1a5f48] text-white px-8 py-3 rounded-full font-bold text-sm uppercase tracking-wide shadow-lg hover:bg-[#154d3a] transition-colors"
+          >
+            Shop Now
+          </Link>
+        </div>
       </div>
 
-      {/* Content Container */}
-      <div className="relative h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center">
-        <div className="max-w-2xl text-white space-y-6 animate-fade-in-up">
-          <div className="inline-block px-4 py-1.5 rounded-full bg-[#1a5f48] bg-opacity-90 text-sm font-medium tracking-wide uppercase mb-4 border border-[#dcf0e8]/30 backdrop-blur-sm">
-            Pure • Authentic • Traditional
-          </div>
-
-          <h1 className="text-5xl md:text-7xl font-serif font-bold leading-tight drop-shadow-lg">
-            Rediscover the <br />
-            <span className="text-[#dcf0e8]">Golden Purity</span>
-          </h1>
-
-          <p className="text-lg md:text-xl text-gray-200 max-w-xl leading-relaxed drop-shadow-md">
-            Hand-churned A2 Gir Cow Ghee made using the ancient Bilona method.
-            Bring home health, taste, and tradition.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 pt-4">
-            <Link
-              href="/products"
-              className="group flex items-center justify-center gap-2 px-8 py-4 bg-[#1a5f48] hover:bg-[#154d3b] text-white rounded-full font-semibold transition-all duration-300 transform hover:-translate-y-1 shadow-lg hover:shadow-[#1a5f48]/50"
-            >
-              Shop Now
-              <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-            </Link>
-            <Link
-              href="/story"
-              className="flex items-center justify-center gap-2 px-8 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/30 text-white rounded-full font-semibold transition-all duration-300 transform hover:-translate-y-1"
-            >
-              Our Story
-            </Link>
-          </div>
+      {/* Desktop Banner */}
+      <div className="hidden md:block relative w-full aspect-[1440/600]">
+        <Image
+          src="/images/sliders.webp"
+          alt="Gau Krishna Hero Banner"
+          fill
+          priority
+          className="object-cover"
+          sizes="100vw"
+        />
+        <div className="absolute bottom-16 left-[10%]">
+          <Link
+            href="/products"
+            className="bg-[#1a5f48] text-white px-10 py-4 rounded-full font-bold text-base uppercase tracking-wide shadow-xl hover:bg-[#154d3a] transition-all hover:scale-105"
+          >
+            Shop Now
+          </Link>
         </div>
       </div>
     </section>
-  );
+  )
 }
