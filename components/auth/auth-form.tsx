@@ -272,26 +272,26 @@ export function AuthForm() {
                 </p>
             </div>
 
-            <div className="mb-8">
+            <div className="mb-6">
                 <Button
                     variant="outline"
-                    className="w-full h-11 border-gray-200 hover:bg-gray-50 bg-white"
+                    className="w-full h-10 sm:h-11 border-gray-200 hover:bg-gray-50 hover:border-gray-300 bg-white transition-all shadow-sm rounded-lg text-sm sm:text-base font-medium"
                     type="button"
                     onClick={handleGoogleLogin}
                     disabled={isLoading}
                 >
                     {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon />}
-                    Google
+                    Continue with Google
                 </Button>
             </div>
 
-            <div className="relative mb-8">
+            <div className="relative mb-6">
                 <div className="absolute inset-0 flex items-center">
                     <span className="w-full border-t border-gray-200" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">
-                        OR
+                    <span className="bg-background px-2 text-muted-foreground font-medium tracking-wider">
+                        Or continue with
                     </span>
                 </div>
             </div>
