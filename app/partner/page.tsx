@@ -4,7 +4,6 @@ import { Footer } from '@/components/footer'
 export default function PartnerPage() {
     return (
         <div className="min-h-screen flex flex-col bg-background">
-            <Header />
             <main className="flex-1">
                 <div className="mx-auto max-w-7xl px-4 py-16">
                     <h1 className="text-4xl md:text-5xl font-bold font-serif text-[#1a5f48] mb-8 text-center">Gau Krishna Health Partner</h1>

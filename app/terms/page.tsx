@@ -4,7 +4,6 @@ import { Footer } from '@/components/footer'
 export default function TermsPage() {
     return (
         <div className="min-h-screen flex flex-col bg-background">
-            <Header />
             <main className="flex-1">
                 <div className="mx-auto max-w-4xl px-4 py-16">
                     <h1 className="text-4xl font-bold font-serif text-[#1a5f48] mb-8 text-center">Terms of Service</h1>

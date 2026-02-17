@@ -15,7 +15,6 @@ function OrderSuccessContent() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Header />
       <main className="flex-1">
         <div className="max-w-2xl mx-auto px-4 py-12">
           {/* Success Icon */}

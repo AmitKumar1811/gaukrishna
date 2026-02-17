@@ -28,7 +28,6 @@ export default function CheckoutPage() {
   if (items.length === 0 && !orderPlaced) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
-        <Header />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center py-12">
             <h1 className="text-2xl font-bold text-primary mb-2">Cart is empty</h1>
@@ -62,7 +61,6 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Header />
       <main className="flex-1">
         <div className="max-w-6xl mx-auto px-4 py-8">
           {/* Breadcrumb */}

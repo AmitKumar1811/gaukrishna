@@ -12,7 +12,6 @@ export default function CartPage() {
   if (items.length === 0) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
-        <Header />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center py-12">
             <div className="text-6xl mb-4">🛒</div>
@@ -30,7 +29,6 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Header />
       <main className="flex-1">
         <div className="max-w-6xl mx-auto px-4 py-8">
           {/* Breadcrumb */}

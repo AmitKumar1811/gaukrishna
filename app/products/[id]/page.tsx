@@ -29,7 +29,6 @@ export default function ProductPage({ params }: { params: { id: string } }) {
   if (isLoading || !product) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
-        <Header />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-primary mb-2">Product not found</h1>
@@ -75,7 +74,6 @@ export default function ProductPage({ params }: { params: { id: string } }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Header />
       <main className="flex-1">
         <div className="max-w-6xl mx-auto px-4 py-8">
           {/* Breadcrumb */}
@@ -135,8 +133,8 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                       key={variant.id}
                       onClick={() => setSelectedVariant(variant)}
                       className={`p-3 border-2 rounded-lg transition-colors text-sm font-medium ${selectedVariant?.id === variant.id
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-border bg-background text-foreground hover:border-primary/50'
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border bg-background text-foreground hover:border-primary/50'
                         }`}
                     >
                       <div className="font-semibold">{variant.size}</div>
