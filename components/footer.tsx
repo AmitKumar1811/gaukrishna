@@ -1,39 +1,77 @@
-import Link from 'next/link'
-import { Facebook, Instagram, Mail, Twitter } from 'lucide-react'
+'use client'
 
-const badges = [
-  'ISO 9001:2015',
-  'ISO 22000:2018',
-  'fssai',
-  'FDA',
-  'GMP Certified',
-  'HACCP Certified',
-  'IAF',
+import Link from 'next/link'
+import { Facebook, Instagram, Mail, Twitter, ChevronDown, ChevronUp } from 'lucide-react'
+import { useState } from 'react'
+
+const sliderImages = [
+  '/slider/anv-1.png',
+  '/slider/anv-2.png',
+  '/slider/anv-3.png',
+  '/slider/anv-4.png',
+  '/slider/anv-5.png',
+  '/slider/anv-6.png',
+  '/slider/anv-7.png',
+  '/slider/anv-8.png',
 ]
 
 export function Footer() {
+  const [openSection, setOpenSection] = useState<string | null>(null)
+
+  const toggleSection = (section: string) => {
+    setOpenSection(openSection === section ? null : section)
+  }
+
   return (
     <footer className="bg-[#0f6845] text-white mt-10">
-      {/* Certifications Strip */}
-      <div className="bg-white py-8 border-t border-border">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap justify-center md:justify-between items-center gap-6 md:gap-8">
-            {badges.map((badge) => (
+      <style>{`
+        @keyframes scroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-scroll {
+          animation: scroll 40s linear infinite;
+          display: flex;
+          width: max-content;
+        }
+        .animate-scroll:hover {
+          animation-play-state: paused;
+        }
+      `}</style>
+
+      {/* Certifications Carousel */}
+      <div className="bg-white py-10 border-t border-border overflow-hidden">
+        <div className="relative w-full">
+          <div className="absolute left-0 top-0 z-10 h-full w-12 md:w-32 bg-gradient-to-r from-white to-transparent pointer-events-none"></div>
+          <div className="absolute right-0 top-0 z-10 h-full w-12 md:w-32 bg-gradient-to-l from-white to-transparent pointer-events-none"></div>
+
+          <div className="animate-scroll hover:pause">
+            {[...sliderImages, ...sliderImages].map((img, index) => (
               <div
-                key={badge}
-                className="px-4 py-2 border-2 border-[#0f6845] rounded-full text-sm font-semibold text-[#0f6845] bg-white"
+                key={index}
+                className="mx-3 md:mx-12 flex items-center justify-center h-10 w-20 md:h-20 md:w-40"
               >
-                {badge}
+                <img
+                  src={img}
+                  alt="Certification"
+                  className="max-h-full max-w-full object-contain hover:scale-110 transition-transform duration-300"
+                />
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 md:py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
-          {/* Brand & Newsletter */}
-          <div className="space-y-6">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 md:py-16">
+        {/* Mobile: Centered Brand Name */}
+        <div className="md:hidden text-center mb-8">
+          <h3 className="font-serif text-3xl font-bold lowercase mb-2">gau krishna</h3>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12">
+
+          {/* Brand & Newsletter (Desktop Only Position / Reordered on Mobile) */}
+          <div className="hidden md:block space-y-6">
             <div className="space-y-4">
               <h3 className="font-serif text-3xl font-bold lowercase">gau krishna</h3>
               <div className="text-sm opacity-90 space-y-1">
@@ -44,23 +82,20 @@ export function Footer() {
                 Grievance Redressal Officer: <span className="underline cursor-pointer">Amit Suthar</span>
               </p>
             </div>
-
-            <div className="pt-4">
-              <h4 className="font-bold text-sm mb-4 uppercase tracking-wider">Subscribe to our newsletter</h4>
-              <form className="flex w-full max-w-sm items-center space-x-2">
-                <input
-                  type="email"
-                  placeholder="Email"
-                  className="flex h-10 w-full rounded-md border border-white/20 bg-[#0f6845] px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                />
-              </form>
-            </div>
           </div>
 
-          {/* Services */}
-          <div>
-            <h4 className="font-bold text-[#dcf0e8] mb-6 uppercase tracking-wider text-sm">Services</h4>
-            <ul className="space-y-3 text-sm">
+          {/* Services - Accordion on Mobile */}
+          <div className="border-b border-white/20 md:border-none pb-4 md:pb-0">
+            <button
+              onClick={() => toggleSection('services')}
+              className="flex items-center justify-between w-full md:cursor-default"
+            >
+              <h4 className="font-bold text-[#dcf0e8] uppercase tracking-wider text-sm">Services</h4>
+              <span className="md:hidden">
+                {openSection === 'services' ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+              </span>
+            </button>
+            <ul className={`space-y-3 text-sm mt-4 md:block ${openSection === 'services' ? 'block' : 'hidden'}`}>
               <li><Link href="/products" className="hover:text-[#dcf0e8] transition-colors opacity-90 hover:opacity-100">Shop</Link></li>
               <li><Link href="/track-order" className="hover:text-[#dcf0e8] transition-colors opacity-90 hover:opacity-100">Track Your Order</Link></li>
               <li><Link href="/story" className="hover:text-[#dcf0e8] transition-colors opacity-90 hover:opacity-100">Our Story</Link></li>
@@ -70,10 +105,18 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Policies */}
-          <div>
-            <h4 className="font-bold text-[#dcf0e8] mb-6 uppercase tracking-wider text-sm">Policies</h4>
-            <ul className="space-y-3 text-sm">
+          {/* Policies - Accordion on Mobile */}
+          <div className="border-b border-white/20 md:border-none pb-4 md:pb-0">
+            <button
+              onClick={() => toggleSection('policies')}
+              className="flex items-center justify-between w-full md:cursor-default"
+            >
+              <h4 className="font-bold text-[#dcf0e8] uppercase tracking-wider text-sm">Policies</h4>
+              <span className="md:hidden">
+                {openSection === 'policies' ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+              </span>
+            </button>
+            <ul className={`space-y-3 text-sm mt-4 md:block ${openSection === 'policies' ? 'block' : 'hidden'}`}>
               <li><Link href="/privacy-policy" className="hover:text-[#dcf0e8] transition-colors opacity-90 hover:opacity-100">Privacy Policy</Link></li>
               <li><Link href="/shipping-policy" className="hover:text-[#dcf0e8] transition-colors opacity-90 hover:opacity-100">Shipping Policy</Link></li>
               <li><Link href="/refund-policy" className="hover:text-[#dcf0e8] transition-colors opacity-90 hover:opacity-100">Refund Policy</Link></li>
@@ -82,36 +125,37 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Need Help */}
+          {/* Need Help & Contact */}
           <div className="space-y-6">
             <div>
-              <h4 className="font-bold text-[#dcf0e8] mb-6 uppercase tracking-wider text-sm">Need Help?</h4>
-              <button className="bg-[#d0c689] hover:bg-[#c0b679] text-[#1a5f48] font-bold py-2 px-6 rounded-full transition-colors w-full sm:w-auto mb-6">
-                Contact Us
+              <h4 className="font-bold text-[#dcf0e8] mb-4 uppercase tracking-wider text-sm">Need Help?</h4>
+              <button className="bg-[#d0c689] hover:bg-[#c0b679] text-[#1a5f48] font-bold py-2.5 px-6 rounded-full transition-colors w-full md:w-auto mb-6 flex items-center justify-center gap-2">
+                <span>Contact Us</span>
               </button>
-              <div className="flex gap-4">
-                <a href="#" className="bg-[#d0c689] p-2 rounded-full text-[#1a5f48] hover:scale-110 transition-transform"><Facebook size={20} /></a>
-                <a href="#" className="bg-[#d0c689] p-2 rounded-full text-[#1a5f48] hover:scale-110 transition-transform"><Instagram size={20} /></a>
-                <a href="#" className="bg-[#d0c689] p-2 rounded-full text-[#1a5f48] hover:scale-110 transition-transform"><Mail size={20} /></a>
-                <a href="#" className="bg-[#d0c689] p-2 rounded-full text-[#1a5f48] hover:scale-110 transition-transform"><Twitter size={20} /></a>
-              </div>
-            </div>
 
-            <div className="pt-2">
-              <h4 className="font-bold text-sm mb-3 text-[#dcf0e8]">Download App</h4>
-              <div className="flex gap-3">
-                <div className="h-10 w-32 bg-black rounded border border-white/20 flex items-center justify-center text-xs cursor-pointer hover:bg-black/80">
-                  Google Play
-                </div>
-                <div className="h-10 w-32 bg-black rounded border border-white/20 flex items-center justify-center text-xs cursor-pointer hover:bg-black/80">
-                  App Store
-                </div>
+              <div className="flex justify-center md:justify-start gap-4">
+                <a href="#" className="bg-[#d0c689] p-2.5 rounded-full text-[#1a5f48] hover:scale-110 transition-transform"><Facebook size={20} /></a>
+                <a href="#" className="bg-[#d0c689] p-2.5 rounded-full text-[#1a5f48] hover:scale-110 transition-transform"><Instagram size={20} /></a>
+                <a href="#" className="bg-[#d0c689] p-2.5 rounded-full text-[#1a5f48] hover:scale-110 transition-transform"><Mail size={20} /></a>
+                <a href="#" className="bg-[#d0c689] p-2.5 rounded-full text-[#1a5f48] hover:scale-110 transition-transform"><Twitter size={20} /></a>
               </div>
             </div>
           </div>
+
         </div>
 
-        <div className="border-t border-white/10 mt-16 pt-8 text-center text-xs text-white/70">
+        {/* Mobile: Address & Info (Shown at bottom) */}
+        <div className="md:hidden text-center space-y-4 mt-8 pt-8 border-t border-white/20">
+          <div className="text-sm opacity-90 space-y-1">
+            <p>Corporate Office - Dhingsara , Fatehabad</p>
+            <p>Registered Office - Main Bus stand Dhingasara</p>
+          </div>
+          <p className="text-sm opacity-90">
+            Grievance Redressal Officer: <span className="underline cursor-pointer">Amit Suthar</span>
+          </p>
+        </div>
+
+        <div className="border-t border-white/10 mt-12 pt-8 text-center text-xs text-white/70">
           <p>Copyright © 2026, Gau Krishna Farm Technologies Pvt. Ltd.</p>
         </div>
       </div>

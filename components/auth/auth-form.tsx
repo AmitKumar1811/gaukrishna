@@ -6,10 +6,15 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import PhoneInput from "react-phone-input-2"
 import "react-phone-input-2/lib/style.css"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
+import { useDispatch } from "react-redux"
+import { setCredentials } from "@/lib/features/authSlice"
 import {
     Loader2,
     Eye,
-    EyeOff
+    EyeOff,
+    ArrowLeft
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -23,6 +28,9 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+// @ts-ignore
+import { signInWithGoogle } from "@/lib/firebaseAuth"
+import { authService } from "@/lib/auth-service"
 
 const loginSchema = z.object({
     email: z.string().email({ message: "Invalid email address" }),
@@ -36,11 +44,19 @@ const registerSchema = z.object({
     password: z.string().min(6, { message: "Password must be at least 6 characters" }),
 })
 
+const forgotPasswordSchema = z.object({
+    email: z.string().email({ message: "Invalid email address" }),
+})
+
 type LoginValues = z.infer<typeof loginSchema>
 type RegisterValues = z.infer<typeof registerSchema>
+type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>
 
 export function AuthForm() {
+    const router = useRouter()
+    const dispatch = useDispatch()
     const [activeTab, setActiveTab] = useState<"login" | "register">("register")
+    const [isForgotPassword, setIsForgotPassword] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
 
@@ -62,20 +78,114 @@ export function AuthForm() {
         },
     })
 
+    const forgotPasswordForm = useForm<ForgotPasswordValues>({
+        resolver: zodResolver(forgotPasswordSchema),
+        defaultValues: {
+            email: "",
+        },
+    })
+
     async function onLoginSubmit(data: LoginValues) {
         setIsLoading(true)
-        setTimeout(() => {
-            console.log("Login Data:", data)
+        try {
+            const res = await authService.login(data)
+            const token = res?.accessToken || res?.token
+
+            if (token) {
+                dispatch(setCredentials({ user: res.user, token: token }))
+                toast.success("Logged in successfully!")
+                router.push("/")
+                router.refresh()
+            } else {
+                toast.success("Logged in!")
+                router.push("/")
+            }
+        } catch (error: any) {
+            console.error("Login Error:", error)
+            toast.error(error.response?.data?.message || "Login failed. Please check your credentials.")
+        } finally {
             setIsLoading(false)
-        }, 2000)
+        }
     }
 
     async function onRegisterSubmit(data: RegisterValues) {
         setIsLoading(true)
-        setTimeout(() => {
-            console.log("Register Data:", data)
+        try {
+            const payload = {
+                name: data.fullName,
+                email: data.email,
+                phone: data.phone,
+                password: data.password
+            }
+            const res = await authService.register(payload)
+            toast.success("Registration successful! Please login.")
+            setActiveTab("login")
+        } catch (error: any) {
+            console.error("Register Error:", error)
+            toast.error(error.response?.data?.message || "Registration failed. Please try again.")
+        } finally {
             setIsLoading(false)
-        }, 2000)
+        }
+    }
+
+    async function onForgotPasswordSubmit(data: ForgotPasswordValues) {
+        setIsLoading(true)
+        try {
+            await authService.forgotPassword(data.email)
+            toast.success("Password reset link sent to your email.")
+            setIsForgotPassword(false)
+        } catch (error: any) {
+            console.error("Forgot Password Error:", error)
+            toast.error(error.response?.data?.message || "Failed to send reset link.")
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    const handleGoogleLogin = async () => {
+        setIsLoading(true)
+        try {
+            const user = await signInWithGoogle()
+            const idToken = await user.getIdToken()
+
+            const payload = {
+                token: idToken,
+                user: {
+                    name: user.displayName,
+                    email: user.email,
+                    photoUrl: user.photoURL,
+                    uid: user.uid
+                }
+            }
+
+            const res = await authService.googleLogin(payload)
+            if (res?.token) {
+                dispatch(setCredentials({ user: res.user, token: res.token })) // Update Redux state
+                toast.success("Google login successful!")
+                router.push("/")
+                router.refresh()
+            } else {
+                // If backend doesn't return a token but accepts the login
+                // This path seems risky, but keeping existing logic with added dispatch if possible.
+                // Assuming res.user exists even if token is missing in this specific branch,
+                // otherwise we might need to rely on the firebase token.
+                // For now, let's stick to the happy path where backend returns token.
+                const fallbackUser = {
+                    name: user.displayName || '',
+                    email: user.email || '',
+                    photoUrl: user.photoURL || '',
+                    uid: user.uid
+                };
+                dispatch(setCredentials({ user: res?.user || fallbackUser, token: idToken }))
+                toast.success("Google login successful!")
+                router.push("/")
+            }
+        } catch (error: any) {
+            console.error("Google Login Error:", error)
+            toast.error("Google login failed.")
+        } finally {
+            setIsLoading(false)
+        }
     }
 
     const GoogleIcon = () => (
@@ -101,6 +211,54 @@ export function AuthForm() {
 
 
 
+    if (isForgotPassword) {
+        return (
+            <div className="flex flex-col h-full justify-center w-full max-w-md mx-auto">
+                <div className="mb-8">
+                    <Button
+                        variant="ghost"
+                        onClick={() => setIsForgotPassword(false)}
+                        className="mb-4 pl-0 hover:bg-transparent hover:text-[#1A4D2E]"
+                    >
+                        <ArrowLeft className="mr-2 h-4 w-4" /> Back to Login
+                    </Button>
+                    <h1 className="text-3xl font-bold text-[#1A4D2E] font-serif">
+                        Reset Password
+                    </h1>
+                    <p className="text-muted-foreground mt-2 text-sm">
+                        Enter your email to receive a password reset link
+                    </p>
+                </div>
+
+                <Form {...forgotPasswordForm}>
+                    <form onSubmit={forgotPasswordForm.handleSubmit(onForgotPasswordSubmit)} className="space-y-4">
+                        <FormField
+                            control={forgotPasswordForm.control}
+                            name="email"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-sm font-semibold">Email</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            placeholder="Johndoe@gmail.com"
+                                            className="h-11 rounded-md border-gray-200 focus:border-[#1A4D2E] focus:ring-[#1A4D2E] bg-white"
+                                            {...field}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <Button type="submit" size="lg" className="w-full h-11 rounded-md text-base bg-[#1A4D2E] hover:bg-[#143D24] text-white font-medium shadow-sm" disabled={isLoading}>
+                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Send Reset Link
+                        </Button>
+                    </form>
+                </Form>
+            </div>
+        )
+    }
+
     return (
         <div className="flex flex-col h-full justify-center w-full max-w-md mx-auto">
             <div className="mb-8">
@@ -115,8 +273,14 @@ export function AuthForm() {
             </div>
 
             <div className="mb-8">
-                <Button variant="outline" className="w-full h-11 border-gray-200 hover:bg-gray-50 bg-white" type="button">
-                    <GoogleIcon />
+                <Button
+                    variant="outline"
+                    className="w-full h-11 border-gray-200 hover:bg-gray-50 bg-white"
+                    type="button"
+                    onClick={handleGoogleLogin}
+                    disabled={isLoading}
+                >
+                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon />}
                     Google
                 </Button>
             </div>
@@ -191,7 +355,13 @@ export function AuthForm() {
                             />
 
                             <div className="flex justify-end">
-                                <a href="#" className="text-xs text-muted-foreground hover:text-[#1A4D2E] hover:underline font-medium">Forgot password?</a>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsForgotPassword(true)}
+                                    className="text-xs text-muted-foreground hover:text-[#1A4D2E] hover:underline font-medium"
+                                >
+                                    Forgot password?
+                                </button>
                             </div>
 
                             <Button type="submit" size="lg" className="w-full h-11 rounded-md text-base bg-[#1A4D2E] hover:bg-[#143D24] text-white font-medium shadow-sm" disabled={isLoading}>

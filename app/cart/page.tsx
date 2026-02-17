@@ -1,6 +1,5 @@
 'use client'
 
-import { Header } from '@/components/header'
 import { Footer } from '@/components/footer'
 import { useCart } from '@/lib/cart-context'
 import { Button } from '@/components/ui/button'

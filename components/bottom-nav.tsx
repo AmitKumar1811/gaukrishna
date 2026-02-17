@@ -1,4 +1,8 @@
+'use client'
+
 import Link from 'next/link'
+import { useSelector } from 'react-redux'
+import { RootState } from '@/lib/store'
 import {
   Home,
   LayoutGrid,
@@ -7,15 +11,17 @@ import {
   User,
 } from 'lucide-react'
 
-const navItems = [
-  { label: 'Home', href: '/', icon: Home },
-  { label: 'All', href: '/products', icon: LayoutGrid },
-  { label: 'Deal', href: '/products?tag=deal', icon: BadgePercent },
-  { label: 'Trending', href: '/products?tag=top', icon: TrendingUp },
-  { label: 'Account', href: '/login', icon: User },
-]
-
 export function BottomNav() {
+  const { isAuthenticated } = useSelector((state: RootState) => state.auth)
+
+  const navItems = [
+    { label: 'Home', href: '/', icon: Home },
+    { label: 'All', href: '/products', icon: LayoutGrid },
+    { label: 'Deal', href: '/products?tag=deal', icon: BadgePercent },
+    { label: 'Trending', href: '/products?tag=top', icon: TrendingUp },
+    { label: 'Account', href: isAuthenticated ? '/profile' : '/login', icon: User },
+  ]
+
   return (
     <nav className="fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 shadow-[0_-4px_18px_rgba(0,0,0,0.04)] sm:hidden">
       <div className="grid grid-cols-5 text-center text-xs text-gray-700">
