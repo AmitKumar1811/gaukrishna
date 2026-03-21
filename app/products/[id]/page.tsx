@@ -1,32 +1,103 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, use } from 'react'
 import { Footer } from '@/components/footer'
-import { getProductById, products } from '@/lib/products'
+import { Product } from '@/lib/products'
 import { useCart } from '@/lib/cart-context'
 import { Button } from '@/components/ui/button'
 import { Star, Check } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
-export default function ProductPage({ params }: { params: { id: string } }) {
+import { apiService } from '@/lib/api-service'
+
+export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
-  const [product, setProduct] = useState(getProductById(params.id))
+  const resolvedParams = use(params)
+  const productId = resolvedParams.id
+
+  const [product, setProduct] = useState<Product | null>(null)
   const { addToCart } = useCart()
-  const [selectedVariant, setSelectedVariant] = useState(product?.variants[0])
+  const [selectedVariant, setSelectedVariant] = useState<Product['variants'][number] | null>(null)
   const [quantity, setQuantity] = useState(1)
   const [addedToCart, setAddedToCart] = useState(false)
-  const [isLoading, setIsLoading] = useState(!product)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    if (!product) {
-      const found = getProductById(params.id)
-      setProduct(found)
-      setSelectedVariant(found?.variants[0])
-      setIsLoading(false)
-    }
-  }, [params.id, product])
+    const loadProduct = async () => {
+      setIsLoading(true)
+      try {
+        const response = await apiService.products.getBySlug(productId)
 
-  if (isLoading || !product) {
+        const rawData = response.data?.data
+
+        // Ensure successful response and data presence
+        if (!rawData) {
+          setProduct(null)
+          setSelectedVariant(null)
+          return
+        }
+
+        const data: Product = {
+          id: rawData.id || rawData._id,
+          slug: rawData.slug || rawData.id || rawData._id,
+          name: rawData.name,
+          image: Array.isArray(rawData.images) && rawData.images.length > 0
+            ? (rawData.images[0].url || rawData.images[0])
+            : '/images/image.webp',
+          rating: rawData.rating || 0,
+          reviews: rawData.review_count || 0,
+          category: typeof rawData.category === 'object' ? rawData.category?.name : (rawData.category || 'Uncategorized'),
+          description: rawData.short_description || rawData.description || '',
+          fullDescription: rawData.description || '',
+          tags: rawData.is_best_seller ? ['Best Seller'] : [],
+          variants: rawData.variants && rawData.variants.length > 0
+            ? rawData.variants.map((v: any) => ({
+              id: v.id || v._id || Math.random().toString(),
+              size: v.size || v.weight || 'Standard',
+              price: v.price,
+              originalPrice: v.mrp || v.price,
+              quantity: v.stock?.toString() || '1'
+            }))
+            : [{
+              id: 'default',
+              size: rawData.weight ? `${rawData.weight}g` : 'Standard',
+              price: rawData.price,
+              originalPrice: rawData.mrp || rawData.price,
+              quantity: rawData.stock?.toString() || '1'
+            }],
+          benefits: [],
+          certifications: [],
+        }
+
+        setProduct(data)
+        setSelectedVariant(data.variants[0] ?? null)
+      } catch (error) {
+        console.error(error)
+        setProduct(null)
+        setSelectedVariant(null)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadProduct()
+  }, [productId])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-primary mb-2">Loading product...</h1>
+            <p className="text-muted-foreground">Please wait a moment.</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
+
+  if (!product) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <main className="flex-1 flex items-center justify-center">

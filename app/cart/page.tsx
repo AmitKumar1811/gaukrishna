@@ -1,13 +1,32 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { Footer } from '@/components/footer'
 import { useCart } from '@/lib/cart-context'
 import { Button } from '@/components/ui/button'
 import { Trash2, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
+import { apiService } from '@/lib/api-service'
 
 export default function CartPage() {
   const { items, removeFromCart, updateQuantity, totalPrice, clearCart } = useCart()
+  const [serverCartLoading, setServerCartLoading] = useState(true)
+
+  // Fetch server cart data on mount
+  useEffect(() => {
+    const fetchServerCart = async () => {
+      try {
+        const response = await apiService.cart.get()
+        console.log('Server cart data fetched from nodejs:', response.data)
+      } catch (error) {
+        console.error('Failed to fetch API cart:', error)
+      } finally {
+        setServerCartLoading(false)
+      }
+    }
+
+    fetchServerCart()
+  }, [])
 
   if (items.length === 0) {
     return (

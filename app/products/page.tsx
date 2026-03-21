@@ -1,21 +1,85 @@
 import { Footer } from '@/components/footer'
 import { ProductCard } from '@/components/product-card'
-import { products } from '@/lib/products'
+import { Product } from '@/lib/products'
 import Link from 'next/link'
+import { apiService } from '@/lib/api-service'
 
 interface ProductsPageProps {
-  searchParams: { [key: string]: string | string[] | undefined }
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
-export default function ProductsPage({ searchParams }: ProductsPageProps) {
-  const category = typeof searchParams.category === 'string' ? searchParams.category : undefined
-  const tag = typeof searchParams.tag === 'string' ? searchParams.tag : undefined
-  const searchQuery = typeof searchParams.search === 'string' ? searchParams.search : undefined
+async function fetchProducts(params?: Record<string, any>): Promise<Product[]> {
+  try {
+    const response = await apiService.products.getAll(params)
+    const rawData = response.data?.data || []
+    return rawData.map((item: any) => ({
+      id: item.id || item._id,
+      slug: item.slug || item.id || item._id,
+      name: item.name,
+      image: Array.isArray(item.images) && item.images.length > 0
+        ? (item.images[0].url || item.images[0])
+        : '/images/image.webp',
+      rating: item.rating || 0,
+      reviews: item.review_count || 0,
+      category: typeof item.category === 'object' ? item.category?.name : (item.category || 'Uncategorized'),
+      categoryId: typeof item.category === 'object' ? (item.category?._id || item.category?.id) : undefined,
+      description: item.short_description || item.description || '',
+      fullDescription: item.description || '',
+      tags: item.is_best_seller ? ['Best Seller'] : [],
+      variants: item.variants && item.variants.length > 0
+        ? item.variants.map((v: any) => ({
+          id: v.id || v._id || Math.random().toString(),
+          size: v.size || v.weight || 'Standard',
+          price: v.price,
+          originalPrice: v.mrp || v.price,
+          quantity: v.stock?.toString() || '1'
+        }))
+        : [{
+          id: 'default',
+          size: item.weight ? `${item.weight}g` : 'Standard',
+          price: item.price,
+          originalPrice: item.mrp || item.price,
+          quantity: item.stock?.toString() || '1'
+        }],
+      benefits: [],
+      certifications: [],
+    }))
+  } catch (error) {
+    console.error('Failed to load products:', error)
+    return []
+  }
+}
+
+export default async function ProductsPage({ searchParams }: ProductsPageProps) {
+  const resolvedSearchParams = await searchParams
+  const category = typeof resolvedSearchParams.category === 'string' ? resolvedSearchParams.category : undefined
+  const categoryId = typeof resolvedSearchParams.categoryId === 'string' ? resolvedSearchParams.categoryId : undefined
+  const tag = typeof resolvedSearchParams.tag === 'string' ? resolvedSearchParams.tag : undefined
+  const searchQuery = typeof resolvedSearchParams.search === 'string' ? resolvedSearchParams.search : undefined
+
+
+  let products: Product[] = []
+  try {
+    const apiParams: Record<string, any> = {}
+    if (categoryId) apiParams.categoryId = categoryId
+    else if (category) apiParams.category = category
+    if (tag) apiParams.tag = tag
+    if (searchQuery) apiParams.search = searchQuery
+
+    products = await fetchProducts(Object.keys(apiParams).length ? apiParams : undefined)
+
+    console.log(products);
+  } catch (error) {
+    console.error(error)
+  }
 
   let filteredProducts = products
   let title = 'All Products'
 
-  if (category) {
+  if (categoryId) {
+    filteredProducts = products.filter((p) => p.categoryId === categoryId)
+    title = products.find((p) => p.categoryId === categoryId)?.category ?? 'Products'
+  } else if (category) {
     filteredProducts = products.filter(
       (p) => p.category.toLowerCase() === category.toLowerCase() ||
         (category.toLowerCase() === 'combo' && p.category.toLowerCase() === 'combo')

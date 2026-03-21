@@ -23,10 +23,6 @@ export function Header() {
 
   const navLinks = [
     { name: 'All Products', href: '/products' },
-    { name: 'A2 Ghee', href: '/products?category=ghee' },
-    { name: 'Wood-Pressed Oils', href: '/products?category=oils' },
-    { name: 'Atta', href: '/products?category=atta' },
-    { name: 'Healthy Combo', href: '/products?category=combo' },
     { name: 'Gau Krishna Health Partner', href: '/partner' },
     { name: 'Blogs', href: '/blogs' },
   ]

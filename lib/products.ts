@@ -8,11 +8,13 @@ export interface ProductVariant {
 
 export interface Product {
   id: string
+  slug: string
   name: string
   image: string
   rating: number
   reviews: number
   category: string
+  categoryId?: string
   description: string
   fullDescription: string
   tags: string[]
@@ -24,6 +26,7 @@ export interface Product {
 export const products: Product[] = [
   {
     id: 'a2-gir-cow-ghee-5l',
+    slug: 'a2-gir-cow-ghee-5l',
     name: 'A2 Gir Cow Ghee - 5L Dolchi',
     image: '/images/image.webp',
     rating: 4.7,
@@ -49,6 +52,7 @@ export const products: Product[] = [
   },
   {
     id: 'a2-desi-cow-ghee-5l',
+    slug: 'a2-desi-cow-ghee-5l',
     name: 'A2 Desi Cow Ghee - 5L Dolchi',
     image: '/images/image.webp',
     rating: 4.7,
@@ -74,6 +78,7 @@ export const products: Product[] = [
   },
   {
     id: 'bilona-churned-desi-buffalo-ghee',
+    slug: 'bilona-churned-desi-buffalo-ghee',
     name: 'Bilona-Churned Desi Buffalo Ghee - 5L Dolchi',
     image: '/images/image.webp',
     rating: 4.4,
@@ -99,6 +104,7 @@ export const products: Product[] = [
   },
   {
     id: 'wood-pressed-groundnut-oil-5l',
+    slug: 'wood-pressed-groundnut-oil-5l',
     name: 'Wood-Pressed Groundnut Oil - 5L Tin Can',
     image: '/images/image.webp',
     rating: 4.5,
@@ -124,6 +130,7 @@ export const products: Product[] = [
   },
   {
     id: 'wood-pressed-mustard-oil-5l',
+    slug: 'wood-pressed-mustard-oil-5l',
     name: 'Wood-Pressed Mustard Oil - 5L Can',
     image: '/images/image.webp',
     rating: 4.6,
@@ -149,6 +156,7 @@ export const products: Product[] = [
   },
   {
     id: 'wood-pressed-coconut-oil-5l',
+    slug: 'wood-pressed-coconut-oil-5l',
     name: 'Wood-Pressed Coconut Oil - 5L Jar',
     image: '/images/image.webp',
     rating: 4.8,
@@ -174,6 +182,7 @@ export const products: Product[] = [
   },
   {
     id: 'khapli-wheat-atta-5kg',
+    slug: 'khapli-wheat-atta-5kg',
     name: 'Khapli Wheat Atta - 5kg Sack',
     image: '/images/image.webp',
     rating: 4.8,
@@ -197,6 +206,7 @@ export const products: Product[] = [
   },
   {
     id: 'immunity-booster-combo',
+    slug: 'immunity-booster-combo',
     name: 'Immunity Booster Combo',
     image: '/images/image.webp',
     rating: 4.9,

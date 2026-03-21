@@ -1,5 +1,6 @@
 import { Star } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Product } from '@/lib/products'
 
 interface ProductCardProps {
@@ -15,14 +16,16 @@ export function ProductCard({ product }: ProductCardProps) {
   )
 
   return (
-    <Link href={`/products/${product.id}`}>
+    <Link href={`/products/${product.slug}`}>
       <div className="group cursor-pointer rounded-xl border border-gray-200 bg-white overflow-hidden shadow-[0_10px_25px_rgba(0,0,0,0.05)] hover:-translate-y-1 transition-transform duration-300">
-        {/* Image container */}
         <div className="relative overflow-hidden bg-[#f6f6f6] aspect-[4/5]">
-          <img
+          <Image
             src={product.image || '/placeholder.svg'}
             alt={product.name}
-            className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-300 p-4"
+            fill
+            sizes="(min-width: 1024px) 320px, 50vw"
+            className="object-contain group-hover:scale-105 transition-transform duration-300 p-5"
+            priority={false}
           />
 
           {/* Badges */}

@@ -1,5 +1,4 @@
 import { apiClient } from './api-client';
-
 export interface LoginData {
     email: string;
     password?: string;
@@ -25,9 +24,6 @@ export const authService = {
     },
 
     async googleLogin(data: any) {
-        // Sending the entire user object or token as needed. 
-        // Based on "sending data of google login", usually we send the firebase token or user profile.
-        // I'll assume we send the firebase ID token and user info.
         const response = await apiClient.post('/auth/google', data);
         return response.data;
     },
