@@ -18,13 +18,13 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <Link href={`/products/${product.slug}`}>
       <div className="group cursor-pointer rounded-xl border border-gray-200 bg-white overflow-hidden shadow-[0_10px_25px_rgba(0,0,0,0.05)] hover:-translate-y-1 transition-transform duration-300">
-        <div className="relative overflow-hidden bg-[#f6f6f6] aspect-[4/5]">
+        <div className="relative overflow-hidden bg-[#f6f6f6] aspect-square">
           <Image
             src={product.image || '/placeholder.svg'}
             alt={product.name}
             fill
-            sizes="(min-width: 1024px) 320px, 50vw"
-            className="object-contain group-hover:scale-105 transition-transform duration-300 p-5"
+            sizes="(min-width: 1024px) 320px, 60vw"
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
             priority={false}
           />
 
@@ -80,9 +80,6 @@ export function ProductCard({ product }: ProductCardProps) {
             <button className="px-5 py-2 border-2 border-[#1a5f48] text-[#1a5f48] font-bold rounded-lg hover:bg-[#1a5f48] hover:text-white transition-colors text-sm">
               ADD
             </button>
-          </div>
-          <div className="text-[11px] text-[#1a5f48] bg-[#e9f3ec] border border-[#d8e6dd] rounded-md px-3 py-2">
-            Save ₹{(maxOriginal - minPrice).toLocaleString()} — no other discounts
           </div>
         </div>
       </div>

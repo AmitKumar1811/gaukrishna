@@ -261,20 +261,16 @@ export function Categories() {
                   </div>
                 )}
 
-                {/* Product Image */}
-                <div className="relative aspect-square w-full bg-white p-6 group-hover:bg-gray-50 transition-colors">
+                <div className="relative aspect-square w-full bg-white overflow-hidden group-hover:bg-gray-50 transition-colors">
                   <Image
                     src={product.image}
                     alt={product.name}
                     sizes="(min-width: 1024px) 280px, 100vw"
                     fill
-                    className="object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                 </div>
-
-                {/* Content */}
                 <div className="p-4 pt-1 flex flex-col gap-3 flex-1">
-                  {/* Label (Top Rated / Selling Fast) */}
                   <div className="flex items-center justify-between min-h-[24px]">
                     {product.label && (
                       <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold ${product.badgeType === 'trending' ? 'bg-[#e7f5ef] text-[#1a5f48]' : 'bg-[#fff4e5] text-[#b96b00]'
@@ -313,14 +309,6 @@ export function Categories() {
                     >
                       ADD
                     </Button>
-                  </div>
-
-                  {/* Savings Footer */}
-                  <div className="mt-2 bg-[#ecfdf5] text-[#1a5f48] text-[10px] font-bold px-2 py-1.5 rounded flex items-center gap-1.5 w-full">
-                    <Tag className="h-3 w-3" />
-                    <span>
-                      Save ₹{product.saveAmount} {product.saveAmount > 3000 ? '- no other discounts' : 'with coupon'}
-                    </span>
                   </div>
                 </div>
               </div>

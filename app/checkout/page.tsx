@@ -1,29 +1,62 @@
 'use client'
 
-import React from "react"
-
-import { useState } from 'react'
+import React, { useEffect, useState } from "react"
 import { useRouter } from 'next/navigation'
 import { Footer } from '@/components/footer'
 import { useCart } from '@/lib/cart-context'
 import { Button } from '@/components/ui/button'
 import { Check } from 'lucide-react'
 import Link from 'next/link'
+import { apiService } from '@/lib/api-service'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 export default function CheckoutPage() {
   const router = useRouter()
   const { items, totalPrice, clearCart } = useCart()
+  const [addresses, setAddresses] = useState<any[]>([])
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(true)
+  const [isSavingAddress, setIsSavingAddress] = useState(false)
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null)
+  const [showAddressForm, setShowAddressForm] = useState(false)
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
+    name: '',
+    type: 'Home',
     email: '',
     phone: '',
-    address: '',
+    addressLine1: '',
+    addressLine2: '',
     city: '',
     state: '',
+    country: '',
     pincode: '',
   })
   const [orderPlaced, setOrderPlaced] = useState(false)
+  const [placingOrder, setPlacingOrder] = useState(false)
+  const [paymentLoading, setPaymentLoading] = useState(false)
+
+  useEffect(() => {
+    const loadAddresses = async () => {
+      setIsLoadingAddresses(true)
+      try {
+        const res = await apiService.addresses.getAll()
+        const list = res.data?.data || res.data || []
+        setAddresses(Array.isArray(list) ? list : [])
+        if (Array.isArray(list) && list.length > 0) {
+          setSelectedAddressId(list[0]._id || list[0].id)
+        }
+      } catch (error) {
+        console.error('Failed to fetch addresses', error)
+      } finally {
+        setIsLoadingAddresses(false)
+      }
+    }
+    loadAddresses()
+  }, [])
 
   if (items.length === 0 && !orderPlaced) {
     return (
@@ -47,13 +80,191 @@ export default function CheckoutPage() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      type: 'Home',
+      email: '',
+      phone: '',
+      addressLine1: '',
+      addressLine2: '',
+      city: '',
+      state: '',
+      country: '',
+      pincode: '',
+    })
+    setEditingAddressId(null)
+    setShowAddressForm(false)
+  }
+
+  const handleSaveAddress = async (e: React.FormEvent) => {
     e.preventDefault()
-    clearCart()
-    const orderId = Math.random().toString(36).substr(2, 9).toUpperCase()
-    const finalAmount = Math.round(totalPrice * 1.18)
-    setOrderPlaced(true)
-    router.push(`/order-success?orderId=${orderId}&total=${finalAmount}`)
+    setIsSavingAddress(true)
+    const payload = {
+      name: formData.name,
+      type: formData.type,
+      email: formData.email,
+      phone: formData.phone,
+      addressLine1: formData.addressLine1,
+      addressLine2: formData.addressLine2,
+      city: formData.city,
+      state: formData.state,
+      country: formData.country,
+      pincode: formData.pincode,
+    }
+    try {
+      if (editingAddressId) {
+        await apiService.addresses.update(editingAddressId, payload)
+      } else {
+        await apiService.addresses.create(payload)
+      }
+      const res = await apiService.addresses.getAll()
+      const list = res.data?.data || res.data || []
+      setAddresses(Array.isArray(list) ? list : [])
+      const newId =
+        editingAddressId ||
+        (Array.isArray(list) && list.length > 0 ? (list[list.length - 1]._id || list[list.length - 1].id) : null)
+      if (newId) setSelectedAddressId(newId)
+      resetForm()
+    } catch (error) {
+      console.error('Failed to save address', error)
+    } finally {
+      setIsSavingAddress(false)
+    }
+  }
+
+  const handleEditAddress = (address: any) => {
+    setEditingAddressId(address._id || address.id)
+    setFormData({
+      name: address.name || `${address.firstName || ''} ${address.lastName || ''}`.trim(),
+      type: address.type || 'Home',
+      email: address.email || '',
+      phone: address.phone || '',
+      addressLine1: address.addressLine1 || address.address || '',
+      addressLine2: address.addressLine2 || '',
+      city: address.city || '',
+      state: address.state || '',
+      country: address.country || '',
+      pincode: address.pincode || '',
+    })
+    setShowAddressForm(true)
+  }
+
+  const handleDeleteAddress = async (addressId: string) => {
+    try {
+      await apiService.addresses.remove(addressId)
+      const updated = addresses.filter((a) => (a._id || a.id) !== addressId)
+      setAddresses(updated)
+      if (selectedAddressId === addressId) {
+        setSelectedAddressId(updated[0] ? updated[0]._id || updated[0].id : null)
+      }
+      if (editingAddressId === addressId) resetForm()
+    } catch (error) {
+      console.error('Failed to delete address', error)
+    }
+  }
+
+  const handlePlaceOrder = async () => {
+    if (!selectedAddressId) return
+    const selectedAddress = addresses.find((a) => (a._id || a.id) === selectedAddressId)
+    if (!selectedAddress) return
+
+    const normalizedAddress = {
+      type: selectedAddress.type || 'Home',
+      name:
+        selectedAddress.name ||
+        `${selectedAddress.firstName || ''} ${selectedAddress.lastName || ''}`.trim() ||
+        'Customer',
+      phone: selectedAddress.phone || '',
+      addressLine1: selectedAddress.addressLine1 || selectedAddress.address || '',
+      addressLine2: selectedAddress.addressLine2 || selectedAddress.landmark || selectedAddress.area || '',
+      city: selectedAddress.city || '',
+      state: selectedAddress.state || '',
+      country: selectedAddress.country || 'India',
+      pincode: selectedAddress.pincode || '',
+      isDefault: selectedAddress.isDefault ?? false,
+    }
+
+    setPlacingOrder(true)
+    try {
+      setPaymentLoading(true)
+
+      const backendOrder = await apiService.orders.placeFromCart({ addressId: selectedAddressId })
+      const resData = backendOrder.data?.data || backendOrder.data || {};
+      const appOrderId =
+        resData?._id ||
+        resData?.id ||
+        resData?.orderId ||
+        resData?.order?._id ||
+        resData?.order?.id ||
+        backendOrder.data?.orderId;
+
+      if (!appOrderId) {
+        console.error('Missing order ID in response:', backendOrder.data);
+        throw new Error('Could not find order ID from checkout response');
+      }
+
+      const orderRes = await apiService.payments.createOrder(appOrderId)
+      const rpOrderId = orderRes.data?.data?.id || orderRes.data?.orderId
+      const rpAmount = orderRes.data?.data?.amount || orderRes.data?.amount
+      const rpCurrency = orderRes.data?.data?.currency || orderRes.data?.currency || 'INR'
+
+      const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || ''
+      const loadRazorpay = () =>
+        new Promise<void>((resolve, reject) => {
+          if (typeof window === 'undefined') return reject(new Error('window undefined'))
+          if ((window as any).Razorpay) return resolve()
+          const script = document.createElement('script')
+          script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+          script.onload = () => resolve()
+          script.onerror = () => reject(new Error('Failed to load Razorpay'))
+          document.body.appendChild(script)
+        })
+
+      await loadRazorpay()
+
+      await new Promise<void>((resolve, reject) => {
+        const rzp = new (window as any).Razorpay({
+          key: razorpayKey,
+          amount: rpAmount,
+          currency: rpCurrency,
+          name: 'Checkout',
+          description: 'Order Payment',
+          order_id: rpOrderId,
+          handler: async (response: any) => {
+            try {
+              await apiService.payments.verify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              })
+              resolve()
+            } catch (err) {
+              console.error('Payment verification failed', err)
+              reject(err)
+            }
+          },
+          prefill: {
+            name: normalizedAddress.name,
+            email: formData.email || selectedAddress.email || '',
+            contact: normalizedAddress.phone,
+          },
+          theme: { color: '#1a5f48' },
+        })
+        rzp.on('payment.failed', (resp: any) => reject(resp?.error || new Error('Payment failed')))
+        rzp.open()
+      })
+
+      const orderId = appOrderId || 'ORDER'
+      clearCart()
+      setOrderPlaced(true)
+      router.push(`/order-success?orderId=${orderId}`)
+    } catch (error) {
+      console.error('Failed to place order', error)
+    } finally {
+      setPlacingOrder(false)
+      setPaymentLoading(false)
+    }
   }
 
   const taxAmount = Math.round(totalPrice * 0.18)
@@ -78,120 +289,223 @@ export default function CheckoutPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Checkout Form */}
             <div className="lg:col-span-2">
-              <form onSubmit={handleSubmit} className="space-y-8">
-                {/* Shipping Information */}
+              <div className="space-y-8">
+                {/* Saved Addresses */}
                 <div className="bg-card border border-border rounded-lg p-6">
-                  <h2 className="text-xl font-bold text-foreground mb-6">Shipping Address</h2>
-
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <input
-                      type="text"
-                      name="firstName"
-                      placeholder="First Name"
-                      value={formData.firstName}
-                      onChange={handleInputChange}
-                      required
-                      className="px-4 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary"
-                    />
-                    <input
-                      type="text"
-                      name="lastName"
-                      placeholder="Last Name"
-                      value={formData.lastName}
-                      onChange={handleInputChange}
-                      required
-                      className="px-4 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary"
-                    />
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h2 className="text-xl font-bold text-foreground">Your Addresses</h2>
+                      {addresses.length === 0 && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          No saved addresses yet. Add one to continue.
+                        </p>
+                      )}
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      {isLoadingAddresses ? 'Loading...' : `${addresses.length} saved`}
+                    </Badge>
                   </div>
-
-                  <input
-                    type="email"
-                    name="email"
-                    placeholder="Email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary mb-4"
-                  />
-
-                  <input
-                    type="tel"
-                    name="phone"
-                    placeholder="Phone Number"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary mb-4"
-                  />
-
-                  <textarea
-                    name="address"
-                    placeholder="Address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    required
-                    rows={3}
-                    className="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary mb-4"
-                  />
-
-                  <div className="grid grid-cols-3 gap-4">
-                    <input
-                      type="text"
-                      name="city"
-                      placeholder="City"
-                      value={formData.city}
-                      onChange={handleInputChange}
-                      required
-                      className="px-4 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary"
-                    />
-                    <input
-                      type="text"
-                      name="state"
-                      placeholder="State"
-                      value={formData.state}
-                      onChange={handleInputChange}
-                      required
-                      className="px-4 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary"
-                    />
-                    <input
-                      type="text"
-                      name="pincode"
-                      placeholder="Pincode"
-                      value={formData.pincode}
-                      onChange={handleInputChange}
-                      required
-                      className="px-4 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary"
-                    />
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {addresses.map((addr) => {
+                      const id = addr._id || addr.id
+                      const isSelected = selectedAddressId === id
+                      return (
+                        <Card
+                          key={id}
+                          className={`p-4 border-2 cursor-pointer transition-colors ${isSelected ? 'border-primary bg-primary/5' : 'border-border'
+                            }`}
+                          onClick={() => setSelectedAddressId(id)}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                {addr.type && (
+                                  <Badge variant="outline" className="text-[11px] uppercase tracking-wide">
+                                    {addr.type}
+                                  </Badge>
+                                )}
+                                {addr.isDefault && (
+                                  <Badge className="text-[11px] bg-primary text-white">Default</Badge>
+                                )}
+                              </div>
+                              <p className="mt-1 font-semibold text-foreground">
+                                {addr.name || `${addr.firstName || ''} ${addr.lastName || ''}`.trim()}
+                              </p>
+                              <p className="text-sm text-muted-foreground">{addr.phone}</p>
+                              <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                                {addr.addressLine1 || addr.address}
+                                {addr.addressLine2 ? `, ${addr.addressLine2}` : ''}
+                                {addr.area ? `, ${addr.area}` : ''}
+                                {addr.landmark ? `, ${addr.landmark}` : ''}
+                                {addr.city ? `, ${addr.city}` : ''}
+                                {addr.state ? `, ${addr.state}` : ''}
+                                {addr.country ? `, ${addr.country}` : ''}
+                                {addr.pincode ? ` - ${addr.pincode}` : ''}
+                              </p>
+                              {addr.email && (
+                                <p className="text-xs text-muted-foreground mt-1">{addr.email}</p>
+                              )}
+                            </div>
+                            {isSelected && <Check className="h-5 w-5 text-primary" />}
+                          </div>
+                          <div className="flex gap-3 mt-3">
+                            <button
+                              type="button"
+                              className="text-sm text-primary hover:underline"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleEditAddress(addr)
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="text-sm text-destructive hover:underline"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDeleteAddress(id)
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </Card>
+                      )
+                    })}
+                    {!addresses.length && !isLoadingAddresses && (
+                      <p className="text-sm text-muted-foreground">No saved addresses. Add one below.</p>
+                    )}
                   </div>
                 </div>
 
-                {/* Payment Information */}
+                {/* Add / Edit Address */}
                 <div className="bg-card border border-border rounded-lg p-6">
-                  <h2 className="text-xl font-bold text-foreground mb-6">Payment Method</h2>
-
-                  <div className="space-y-3">
-                    <label className="flex items-center p-4 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
-                      <input
-                        type="radio"
-                        name="payment"
-                        value="credit-card"
-                        defaultChecked
-                        className="mr-3"
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-bold text-foreground">
+                      {editingAddressId ? 'Edit Address' : 'Add a New Address'}
+                    </h2>
+                    {editingAddressId && (
+                      <button
+                        type="button"
+                        className="text-sm text-primary hover:underline"
+                        onClick={resetForm}
+                      >
+                        Cancel edit
+                      </button>
+                    )}
+                  </div>
+                  {!showAddressForm ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full border-primary text-primary"
+                      onClick={() => setShowAddressForm(true)}
+                    >
+                      Add Address
+                    </Button>
+                  ) : (
+                    <form onSubmit={handleSaveAddress} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <Input
+                          name="name"
+                          placeholder="Full Name"
+                          value={formData.name}
+                          onChange={handleInputChange}
+                          required
+                        />
+                        <Select
+                          value={formData.type}
+                          onValueChange={(val) => setFormData((p) => ({ ...p, type: val }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Home">Home</SelectItem>
+                            <SelectItem value="Office">Office</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Input
+                        type="email"
+                        name="email"
+                        placeholder="Email"
+                        value={formData.email}
+                        onChange={handleInputChange}
                       />
-                      <span className="text-foreground font-medium">Credit/Debit Card</span>
-                    </label>
-                    <label className="flex items-center p-4 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
-                      <input type="radio" name="payment" value="upi" className="mr-3" />
-                      <span className="text-foreground font-medium">UPI</span>
-                    </label>
-                    <label className="flex items-center p-4 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
-                      <input type="radio" name="payment" value="cod" className="mr-3" />
-                      <span className="text-foreground font-medium">Cash on Delivery</span>
-                    </label>
-                  </div>
+                      <Input
+                        type="tel"
+                        name="phone"
+                        placeholder="Phone Number"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        required
+                      />
+                      <Input
+                        name="addressLine1"
+                        placeholder="Address Line 1"
+                        value={formData.addressLine1}
+                        onChange={handleInputChange}
+                        required
+                      />
+                      <Input
+                        name="addressLine2"
+                        placeholder="Address Line 2 (optional)"
+                        value={formData.addressLine2}
+                        onChange={handleInputChange}
+                      />
+                      <div className="grid grid-cols-3 gap-4">
+                        <Input
+                          name="city"
+                          placeholder="City"
+                          value={formData.city}
+                          onChange={handleInputChange}
+                          required
+                        />
+                        <Input
+                          name="state"
+                          placeholder="State"
+                          value={formData.state}
+                          onChange={handleInputChange}
+                          required
+                        />
+                        <Input
+                          name="pincode"
+                          placeholder="Pincode"
+                          value={formData.pincode}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
+                      <Input
+                        name="country"
+                        placeholder="Country"
+                        value={formData.country}
+                        onChange={handleInputChange}
+                      />
+                      <div className="flex gap-3">
+                        <Button
+                          type="submit"
+                          className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+                          disabled={isSavingAddress}
+                        >
+                          {isSavingAddress ? 'Saving...' : editingAddressId ? 'Update Address' : 'Save Address'}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={resetForm}
+                          className="flex-1"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </form>
+                  )}
                 </div>
 
-                {/* Order Items Review */}
                 <div className="bg-card border border-border rounded-lg p-6">
                   <h2 className="text-xl font-bold text-foreground mb-4">Order Items</h2>
                   <div className="space-y-3">
@@ -213,12 +527,14 @@ export default function CheckoutPage() {
                 </div>
 
                 <Button
-                  type="submit"
+                  type="button"
+                  onClick={handlePlaceOrder}
+                  disabled={!selectedAddressId || placingOrder}
                   className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base"
                 >
-                  Place Order
+                  {placingOrder ? 'Placing order...' : 'Place Order'}
                 </Button>
-              </form>
+              </div>
             </div>
 
             {/* Order Summary */}

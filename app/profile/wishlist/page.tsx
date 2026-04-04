@@ -69,7 +69,7 @@ export default function WishlistPage() {
         }
     }
 
-    const handleAddToCart = (item: WishlistItem) => {
+    const handleAddToCart = async (item: WishlistItem) => {
         let variantId = 'default';
         let size = 'Standard';
         let price = typeof item.price === 'string' ? parseFloat(String(item.price).replace(/[^0-9.]/g, '')) : (Number(item.gst_inclusive_price) || Number(item.price) || 0);
@@ -81,7 +81,7 @@ export default function WishlistPage() {
             price = variant.price;
         }
 
-        addToCart({
+        await addToCart({
             productId: item._id || item.id,
             variantId: variantId,
             productName: item.name,

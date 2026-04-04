@@ -3,16 +3,31 @@ import { ProductCard } from '@/components/product-card'
 import { Product } from '@/lib/products'
 import Link from 'next/link'
 import { apiService } from '@/lib/api-service'
+import ProductsFilters from './products-filters'
 
 interface ProductsPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
-async function fetchProducts(params?: Record<string, any>): Promise<Product[]> {
+async function fetchCategories(): Promise<{ label: string, id: string }[]> {
   try {
-    const response = await apiService.products.getAll(params)
-    const rawData = response.data?.data || []
+    const response = await apiService.categories.getAll()
+    const rawData = response.data?.data || response.data || []
     return rawData.map((item: any) => ({
+      id: item._id || item.id || '',
+      label: item.name || 'Uncategorized'
+    })).filter((c: any) => c.id && c.label)
+  } catch (error) {
+    console.error('Failed to load categories:', error)
+    return []
+  }
+}
+
+async function fetchProducts(params?: Record<string, any>): Promise<{ products: Product[], total: number, totalPages?: number }> {
+  try {
+    const response = await apiService.products.getAll(params);
+    const rawData = response.data?.data || []
+    const products = rawData.map((item: any) => ({
       id: item.id || item._id,
       slug: item.slug || item.id || item._id,
       name: item.name,
@@ -43,10 +58,17 @@ async function fetchProducts(params?: Record<string, any>): Promise<Product[]> {
         }],
       benefits: [],
       certifications: [],
+      isBestSeller: !!item.is_best_seller,
+      isNewLaunch: !!item.is_new_launch,
     }))
+    return {
+      products,
+      total: response.data?.total || rawData.length,
+      totalPages: response.data?.totalPages
+    }
   } catch (error) {
     console.error('Failed to load products:', error)
-    return []
+    return { products: [], total: 0 }
   }
 }
 
@@ -56,48 +78,66 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const categoryId = typeof resolvedSearchParams.categoryId === 'string' ? resolvedSearchParams.categoryId : undefined
   const tag = typeof resolvedSearchParams.tag === 'string' ? resolvedSearchParams.tag : undefined
   const searchQuery = typeof resolvedSearchParams.search === 'string' ? resolvedSearchParams.search : undefined
-
+  const minPriceParam = resolvedSearchParams.minPrice || resolvedSearchParams.min_price
+  const maxPriceParam = resolvedSearchParams.maxPrice || resolvedSearchParams.max_price
+  const minPrice = typeof minPriceParam === 'string' ? Number(minPriceParam) : undefined
+  const maxPrice = typeof maxPriceParam === 'string' ? Number(maxPriceParam) : undefined
+  const isBestSeller = resolvedSearchParams.is_best_seller === 'true'
+  const isNewLaunch = resolvedSearchParams.is_new_launch === 'true'
+  const page = Number(resolvedSearchParams.page) || 1
+  const limit = Number(resolvedSearchParams.limit) || 10
 
   let products: Product[] = []
+  let totalItems = 0
+  let backendTotalPages: number | undefined
   try {
-    const apiParams: Record<string, any> = {}
-    if (categoryId) apiParams.categoryId = categoryId
-    else if (category) apiParams.category = category
-    if (tag) apiParams.tag = tag
-    if (searchQuery) apiParams.search = searchQuery
 
-    products = await fetchProducts(Object.keys(apiParams).length ? apiParams : undefined)
+    const apiParams: Record<string, any> = { ...resolvedSearchParams }
+    apiParams.page = page
+    apiParams.limit = limit
 
-    console.log(products);
+    const result = await fetchProducts(Object.keys(apiParams).length ? apiParams : undefined)
+    products = result.products
+    totalItems = result.total
+    backendTotalPages = result.totalPages
   } catch (error) {
     console.error(error)
   }
 
-  let filteredProducts = products
   let title = 'All Products'
-
   if (categoryId) {
-    filteredProducts = products.filter((p) => p.categoryId === categoryId)
     title = products.find((p) => p.categoryId === categoryId)?.category ?? 'Products'
   } else if (category) {
-    filteredProducts = products.filter(
-      (p) => p.category.toLowerCase() === category.toLowerCase() ||
-        (category.toLowerCase() === 'combo' && p.category.toLowerCase() === 'combo')
-    )
     title = category.charAt(0).toUpperCase() + category.slice(1).toLowerCase()
     if (category.toLowerCase() === 'combo') title = 'Health Combos'
     if (category.toLowerCase() === 'atta') title = 'Premium Atta'
   } else if (tag) {
-    filteredProducts = products.filter((p) =>
-      p.tags.some((t) => t.toLowerCase().includes(tag.toLowerCase()))
-    )
     title = tag.charAt(0).toUpperCase() + tag.slice(1)
   } else if (searchQuery) {
-    filteredProducts = products.filter((p) =>
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.description.toLowerCase().includes(searchQuery.toLowerCase())
-    )
     title = `Search Results for "${searchQuery}"`
+  }
+
+  const priceBounds = { min: 0, max: 10000 }
+
+  const uniqueCategories = await fetchCategories();
+
+  const computedTotalPages = backendTotalPages ? backendTotalPages : totalItems > 0 ? Math.ceil(totalItems / limit) : Math.ceil(products.length / limit)
+  const totalPages = Math.max(1, computedTotalPages)
+  const currentPage = Math.min(Math.max(page, 1), totalPages)
+  const paginatedProducts = products;
+
+  const buildPageLink = (targetPage: number) => {
+    const params = new URLSearchParams()
+    Object.entries(resolvedSearchParams).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        value.forEach((v) => v && params.append(key, v))
+      } else if (value) {
+        params.set(key, value)
+      }
+    })
+    params.set('page', targetPage.toString())
+    params.set('limit', limit.toString())
+    return `/products?${params.toString()}`
   }
 
   return (
@@ -128,9 +168,24 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          {filteredProducts.length > 0 ? (
+          <ProductsFilters
+            categories={uniqueCategories}
+            priceBounds={priceBounds}
+            initialFilters={{
+              search: searchQuery,
+              category,
+              categoryId,
+              minPrice,
+              maxPrice,
+              isBestSeller,
+              isNewLaunch,
+              page: currentPage,
+              limit,
+            }}
+          />
+          {paginatedProducts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredProducts.map((product) => (
+              {paginatedProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
@@ -144,6 +199,41 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               >
                 View All Products
               </Link>
+            </div>
+          )}
+          {totalPages > 1 && (
+            <div className="mt-10 flex justify-center">
+              <nav className="flex items-center gap-2" aria-label="Pagination">
+                <Link
+                  href={buildPageLink(Math.max(1, currentPage - 1))}
+                  className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:border-[#1a5f48] hover:text-[#1a5f48] disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-disabled={currentPage === 1}
+                >
+                  Previous
+                </Link>
+                {Array.from({ length: totalPages }).map((_, idx) => {
+                  const pageNumber = idx + 1
+                  return (
+                    <Link
+                      key={pageNumber}
+                      href={buildPageLink(pageNumber)}
+                      className={`px-3 py-2 text-sm font-medium rounded-lg ${pageNumber === currentPage
+                        ? 'bg-[#1a5f48] text-white'
+                        : 'border border-gray-200 hover:border-[#1a5f48] hover:text-[#1a5f48]'
+                        }`}
+                    >
+                      {pageNumber}
+                    </Link>
+                  )
+                })}
+                <Link
+                  href={buildPageLink(Math.min(totalPages, currentPage + 1))}
+                  className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:border-[#1a5f48] hover:text-[#1a5f48] disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-disabled={currentPage === totalPages}
+                >
+                  Next
+                </Link>
+              </nav>
             </div>
           )}
         </div>

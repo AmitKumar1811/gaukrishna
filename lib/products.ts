@@ -21,6 +21,8 @@ export interface Product {
   variants: ProductVariant[]
   benefits: string[]
   certifications: string[]
+  isBestSeller?: boolean
+  isNewLaunch?: boolean
 }
 
 export const products: Product[] = [

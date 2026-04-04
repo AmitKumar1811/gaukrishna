@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect } from 'react'
+import { apiService } from './api-service'
 
 export interface CartItem {
   productId: string
@@ -13,9 +14,9 @@ export interface CartItem {
 
 interface CartContextType {
   items: CartItem[]
-  addToCart: (item: CartItem) => void
-  removeFromCart: (productId: string, variantId: string) => void
-  updateQuantity: (productId: string, variantId: string, quantity: number) => void
+  addToCart: (item: CartItem) => Promise<void>
+  removeFromCart: (productId: string, variantId: string) => Promise<void>
+  updateQuantity: (productId: string, variantId: string, quantity: number) => Promise<void>
   clearCart: () => void
   totalItems: number
   totalPrice: number
@@ -36,14 +37,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setMounted(true)
   }, [])
 
-  // Save cart to localStorage whenever items change
+
   useEffect(() => {
     if (mounted) {
       localStorage.setItem('cart', JSON.stringify(items))
     }
   }, [items, mounted])
 
-  const addToCart = (newItem: CartItem) => {
+  const addToCart = async (newItem: CartItem) => {
+    try {
+      await apiService.cart.add({ productId: newItem.productId, quantity: newItem.quantity })
+    } catch (error) {
+      console.error('Failed to sync add-to-cart with API:', error)
+    }
+
     setItems((prevItems) => {
       const existingItem = prevItems.find(
         (item) => item.productId === newItem.productId && item.variantId === newItem.variantId
@@ -61,7 +68,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     })
   }
 
-  const removeFromCart = (productId: string, variantId: string) => {
+  const removeFromCart = async (productId: string, variantId: string) => {
+    try {
+      await apiService.cart.remove(productId)
+    } catch (error) {
+      console.error('Failed to remove item from API cart:', error)
+    }
+
     setItems((prevItems) =>
       prevItems.filter(
         (item) => !(item.productId === productId && item.variantId === variantId)
@@ -69,10 +82,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     )
   }
 
-  const updateQuantity = (productId: string, variantId: string, quantity: number) => {
+  const updateQuantity = async (productId: string, variantId: string, quantity: number) => {
     if (quantity <= 0) {
-      removeFromCart(productId, variantId)
+      await removeFromCart(productId, variantId)
       return
+    }
+
+    try {
+      await apiService.cart.update({ productId, quantity })
+    } catch (error) {
+      console.error('Failed to update quantity on API cart:', error)
     }
 
     setItems((prevItems) =>
@@ -85,6 +104,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }
 
   const clearCart = () => {
+    apiService.cart.clear().catch((error) => console.error('Failed to clear API cart:', error))
     setItems([])
   }
 

@@ -28,10 +28,10 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
       try {
         const response = await apiService.products.getBySlug(productId)
 
-        const rawData = response.data?.data
+        const rawData = response.data?.data || response.data;
 
         // Ensure successful response and data presence
-        if (!rawData) {
+        if (!rawData || !rawData.name) {
           setProduct(null)
           setSelectedVariant(null)
           return
@@ -114,9 +114,9 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
     )
   }
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (selectedVariant) {
-      addToCart({
+      await addToCart({
         productId: product.id,
         variantId: selectedVariant.id,
         productName: product.name,
@@ -129,9 +129,9 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
     }
   }
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
     if (selectedVariant) {
-      addToCart({
+      await addToCart({
         productId: product.id,
         variantId: selectedVariant.id,
         productName: product.name,
