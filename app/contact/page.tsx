@@ -1,7 +1,50 @@
+'use client'
 
+import type { FormEvent } from 'react'
+import { useState } from 'react'
 import { Footer } from '@/components/footer'
+import { apiService } from '@/lib/api-service'
 
 export default function ContactPage() {
+    const [name, setName] = useState('')
+    const [email, setEmail] = useState('')
+    const [subject, setSubject] = useState('')
+    const [message, setMessage] = useState('')
+
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+    const [success, setSuccess] = useState<string | null>(null)
+
+    const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
+        e.preventDefault()
+        setError(null)
+        setSuccess(null)
+
+        if (!name.trim() || !email.trim() || !subject.trim() || !message.trim()) {
+            setError('Please fill in all fields.')
+            return
+        }
+
+        setIsSubmitting(true)
+        try {
+            await apiService.contacts.create({
+                name: name.trim(),
+                email: email.trim(),
+                subject: subject.trim(),
+                message: message.trim(),
+            })
+            setSuccess('Thanks! Your message has been sent.')
+            setName('')
+            setEmail('')
+            setSubject('')
+            setMessage('')
+        } catch (err: any) {
+            setError(err?.response?.data?.message || err?.message || 'Failed to send message. Please try again.')
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
     return (
         <div className="min-h-screen flex flex-col bg-background">
             <main className="flex-1">
@@ -28,13 +71,58 @@ export default function ContactPage() {
                             </div>
                         </div>
 
-                        <form className="space-y-4">
-                            <input type="text" placeholder="Your Name" className="w-full px-4 py-3 border border-gray-300 rounded focus:ring-[#1a5f48] focus:border-[#1a5f48]" />
-                            <input type="email" placeholder="Your Email" className="w-full px-4 py-3 border border-gray-300 rounded focus:ring-[#1a5f48] focus:border-[#1a5f48]" />
-                            <input type="text" placeholder="Subject" className="w-full px-4 py-3 border border-gray-300 rounded focus:ring-[#1a5f48] focus:border-[#1a5f48]" />
-                            <textarea placeholder="Message" rows={5} className="w-full px-4 py-3 border border-gray-300 rounded focus:ring-[#1a5f48] focus:border-[#1a5f48]"></textarea>
-                            <button type="submit" className="w-full bg-[#1a5f48] text-white py-3 rounded hover:bg-[#154d3b] transition-colors font-semibold">
-                                Send Message
+                        <form className="space-y-4" onSubmit={onSubmit}>
+                            {error ? (
+                                <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                                    {error}
+                                </div>
+                            ) : null}
+                            {success ? (
+                                <div className="rounded border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                                    {success}
+                                </div>
+                            ) : null}
+
+                            <input
+                                type="text"
+                                placeholder="Your Name"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                required
+                                autoComplete="name"
+                                className="w-full px-4 py-3 border border-gray-300 rounded focus:ring-[#1a5f48] focus:border-[#1a5f48]"
+                            />
+                            <input
+                                type="email"
+                                placeholder="Your Email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                                autoComplete="email"
+                                className="w-full px-4 py-3 border border-gray-300 rounded focus:ring-[#1a5f48] focus:border-[#1a5f48]"
+                            />
+                            <input
+                                type="text"
+                                placeholder="Subject"
+                                value={subject}
+                                onChange={(e) => setSubject(e.target.value)}
+                                required
+                                className="w-full px-4 py-3 border border-gray-300 rounded focus:ring-[#1a5f48] focus:border-[#1a5f48]"
+                            />
+                            <textarea
+                                placeholder="Message"
+                                rows={5}
+                                value={message}
+                                onChange={(e) => setMessage(e.target.value)}
+                                required
+                                className="w-full px-4 py-3 border border-gray-300 rounded focus:ring-[#1a5f48] focus:border-[#1a5f48]"
+                            />
+                            <button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className="w-full bg-[#1a5f48] text-white py-3 rounded hover:bg-[#154d3b] transition-colors font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                {isSubmitting ? 'Sending...' : 'Send Message'}
                             </button>
                         </form>
                     </div>

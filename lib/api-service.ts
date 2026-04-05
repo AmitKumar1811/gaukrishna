@@ -54,4 +54,8 @@ export const apiService = {
         getProfile: () => apiClient.get('/user/profile'),
         updateProfile: (data: any) => apiClient.put('/user/profile', data),
     },
+    contacts: {
+        create: (data: { name: string; email: string; subject: string; message: string }) =>
+            apiClient.post('/contacts', data),
+    },
 };
