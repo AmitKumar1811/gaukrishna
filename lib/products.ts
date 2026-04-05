@@ -242,3 +242,40 @@ export function getProductsByCategory(category: string): Product[] {
 export function getAllCategories(): string[] {
   return Array.from(new Set(products.map((p) => p.category)))
 }
+
+export function mapApiProductToProduct(item: any): Product {
+  return {
+    id: item.id || item._id,
+    slug: item.slug || item.id || item._id,
+    name: item.name,
+    image: Array.isArray(item.images) && item.images.length > 0
+      ? (item.images[0].url || item.images[0])
+      : '/images/image.webp',
+    rating: item.rating || 0,
+    reviews: item.review_count || 0,
+    category: typeof item.category === 'object' ? item.category?.name : (item.category || 'Uncategorized'),
+    categoryId: typeof item.category === 'object' ? (item.category?._id || item.category?.id) : undefined,
+    description: item.short_description || item.description || '',
+    fullDescription: item.description || '',
+    tags: item.is_best_seller ? ['Best Seller'] : [],
+    variants: item.variants && item.variants.length > 0
+      ? item.variants.map((v: any) => ({
+        id: v.id || v._id || Math.random().toString(),
+        size: v.size || v.weight || 'Standard',
+        price: v.price,
+        originalPrice: v.mrp || v.price,
+        quantity: v.stock?.toString() || '1'
+      }))
+      : [{
+        id: 'default',
+        size: item.weight ? `${item.weight}g` : 'Standard',
+        price: item.price,
+        originalPrice: item.mrp || item.price,
+        quantity: item.stock?.toString() || '1'
+      }],
+    benefits: [],
+    certifications: [],
+    isBestSeller: !!item.is_best_seller,
+    isNewLaunch: !!item.is_new_launch,
+  }
+}
