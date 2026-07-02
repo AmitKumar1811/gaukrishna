@@ -23,6 +23,9 @@ export interface Product {
   certifications: string[]
   isBestSeller?: boolean
   isNewLaunch?: boolean
+  images?: string[]
+  benefitsHtml?: string
+  ingredientsHtml?: string
 }
 
 export const products: Product[] = [
@@ -251,6 +254,7 @@ export function mapApiProductToProduct(item: any): Product {
     image: Array.isArray(item.images) && item.images.length > 0
       ? (item.images[0].url || item.images[0])
       : '/images/image.webp',
+    images: Array.isArray(item.images) ? item.images.map((img: any) => img.url || img) : [],
     rating: item.rating || 0,
     reviews: item.review_count || 0,
     category: typeof item.category === 'object' ? item.category?.name : (item.category || 'Uncategorized'),
@@ -268,12 +272,14 @@ export function mapApiProductToProduct(item: any): Product {
       }))
       : [{
         id: 'default',
-        size: item.weight ? `${item.weight}g` : 'Standard',
+        size: item.weight ? (/[a-zA-Z]$/.test(item.weight) ? item.weight : `${item.weight}g`) : 'Standard',
         price: item.price,
         originalPrice: item.mrp || item.price,
         quantity: item.stock?.toString() || '1'
       }],
     benefits: [],
+    benefitsHtml: item.benefits || '',
+    ingredientsHtml: item.ingredients || '',
     certifications: [],
     isBestSeller: !!item.is_best_seller,
     isNewLaunch: !!item.is_new_launch,

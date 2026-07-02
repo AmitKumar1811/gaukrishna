@@ -46,7 +46,6 @@ const authSlice = createSlice({
                 localStorage.removeItem('user');
             }
         },
-        // Action to rehydrate state from localStorage on app load
         initializeAuth: (state) => {
             if (typeof window !== 'undefined') {
                 const token = localStorage.getItem('token');

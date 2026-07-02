@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { userService } from '@/lib/user-service'
+import { getOrders } from '@/app/api/user-service'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
@@ -30,7 +30,7 @@ export default function OrderPage() {
     useEffect(() => {
         const fetchOrders = async () => {
             try {
-                const data = await userService.getOrders()
+                const data = await getOrders()
                 // Map backend data to UI structure if necessary
                 const mappedOrders = data.map((order: any) => ({
                     orderId: order.orderId || `#ORD-${order._id?.slice(-6) || '0000'}`,

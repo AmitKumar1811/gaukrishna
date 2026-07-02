@@ -3,7 +3,7 @@
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { Footer } from '@/components/footer'
-import { apiService } from '@/lib/api-service'
+import { createContact } from '@/app/api/api-service'
 
 export default function ContactPage() {
     const [name, setName] = useState('')
@@ -27,7 +27,7 @@ export default function ContactPage() {
 
         setIsSubmitting(true)
         try {
-            await apiService.contacts.create({
+            await createContact({
                 name: name.trim(),
                 email: email.trim(),
                 subject: subject.trim(),

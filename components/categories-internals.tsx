@@ -13,6 +13,7 @@ export type CategoryItem = {
 
 export type DisplayProduct = {
   id: string | number
+  slug: string
   name: string
   image: string
   price: number
@@ -56,6 +57,7 @@ export function mapApiProductToDisplayProduct(item: any): DisplayProduct {
 
   return {
     id: item?.id || item?._id,
+    slug: item?.slug || item?.id || item?._id,
     name: item?.name,
     image:
       Array.isArray(item?.images) && item.images.length > 0
@@ -234,7 +236,7 @@ function ProductTile({ product }: { product: DisplayProduct }) {
         </div>
       )}
 
-      <div className="relative aspect-square w-full bg-white overflow-hidden group-hover:bg-gray-50 transition-colors">
+      <Link href={`/products/${product.slug}`} className="relative aspect-square w-full bg-white overflow-hidden group-hover:bg-gray-50 transition-colors block">
         <Image
           src={product.image}
           alt={product.name}
@@ -242,7 +244,7 @@ function ProductTile({ product }: { product: DisplayProduct }) {
           fill
           className="object-cover transition-transform duration-500 group-hover:scale-105"
         />
-      </div>
+      </Link>
 
       <div className="p-4 pt-1 flex flex-col gap-3 flex-1">
         <div className="flex items-center justify-between min-h-[24px]">
@@ -258,7 +260,9 @@ function ProductTile({ product }: { product: DisplayProduct }) {
           )}
         </div>
 
-        <h3 className="font-serif text-[15px] leading-tight font-bold text-gray-900 line-clamp-2 h-[40px]">{product.name}</h3>
+        <Link href={`/products/${product.slug}`}>
+          <h3 className="font-serif text-[15px] leading-tight font-bold text-gray-900 line-clamp-2 h-[40px] hover:underline">{product.name}</h3>
+        </Link>
 
         <div className="flex items-center gap-1">
           <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
@@ -271,12 +275,19 @@ function ProductTile({ product }: { product: DisplayProduct }) {
             <span className="text-xs text-gray-400 line-through">₹{product.originalPrice.toLocaleString()}</span>
             <span className="text-lg font-bold text-gray-900">₹{product.price.toLocaleString()}</span>
           </div>
-          <Button
-            variant="outline"
-            className="border-[#1a5f48] text-[#1a5f48] hover:bg-[#1a5f48] hover:text-white font-bold h-8 px-4 text-xs tracking-wider uppercase rounded-md transition-colors"
-          >
-            ADD
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="border-[#1a5f48] text-[#1a5f48] hover:bg-[#1a5f48] hover:text-white font-bold h-8 px-3 text-xs tracking-wider uppercase rounded-md transition-colors flex-1"
+            >
+              ADD
+            </Button>
+            <Button
+              className="bg-[#1a5f48] text-white hover:bg-[#154d3b] font-bold h-8 px-3 text-xs tracking-wider uppercase rounded-md transition-colors flex-1"
+            >
+              BUY NOW
+            </Button>
+          </div>
         </div>
       </div>
     </div>

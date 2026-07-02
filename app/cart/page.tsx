@@ -6,18 +6,28 @@ import { useCart } from '@/lib/cart-context'
 import { Button } from '@/components/ui/button'
 import { Trash2, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
-import { apiService } from '@/lib/api-service'
+import { getCart } from '@/app/api/api-service'
 
 export default function CartPage() {
   const { items, removeFromCart, updateQuantity, totalPrice, clearCart } = useCart()
   const [serverCartLoading, setServerCartLoading] = useState(true)
 
-  // Fetch server cart data on mount
   useEffect(() => {
     const fetchServerCart = async () => {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        setServerCartLoading(false)
+        return
+      }
+
       try {
-        const response = await apiService.cart.get()
-        console.log('Server cart data fetched from nodejs:', response.data)
+        const response = await getCart()
+        const data = response.data?.data || response.data || response
+        console.log('Server cart data fetched from nodejs:', data)
+        
+        if (data && (!data.items || data.items.length === 0)) {
+          clearCart()
+        }
       } catch (error) {
         console.error('Failed to fetch API cart:', error)
       } finally {
@@ -26,6 +36,7 @@ export default function CartPage() {
     }
 
     fetchServerCart()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   if (items.length === 0) {

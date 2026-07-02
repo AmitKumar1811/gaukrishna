@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { userService } from '@/lib/user-service'
+import { getWishlist, removeFromWishlist } from '@/app/api/user-service'
 import { Loader2, Trash2, ShoppingCart } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
@@ -36,7 +36,7 @@ export default function WishlistPage() {
 
     const fetchWishlist = async () => {
         try {
-            const data = await userService.getWishlist()
+            const data = await getWishlist()
             setWishlist(Array.isArray(data) ? data : (data.products || []));
         } catch (error) {
             console.error('Failed to fetch wishlist:', error)
@@ -56,7 +56,7 @@ export default function WishlistPage() {
             const currentWishlist = [...wishlist];
             setWishlist(wishlist.filter(item => (item._id || item.id) !== productId));
 
-            await userService.removeFromWishlist(productId);
+            await removeFromWishlist(productId);
             toast.success('Removed from wishlist');
 
             // Re-fetch to sync state just in case

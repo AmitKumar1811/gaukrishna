@@ -6,7 +6,7 @@ import { Footer } from '@/components/footer'
 import { useRouter, usePathname } from 'next/navigation'
 import { useDispatch } from 'react-redux'
 import { logout } from '@/lib/features/authSlice'
-import { authService } from '@/lib/auth-service'
+import { logoutUser } from '@/app/api/auth-service'
 import { toast } from 'sonner'
 
 const sidebarNavItems = [
@@ -43,7 +43,7 @@ export default function ProfileLayout({ children }: ProfileLayoutProps) {
 
     const handleLogout = async () => {
         try {
-            await authService.logout()
+            await logoutUser()
             dispatch(logout())
             toast.success('Logged out successfully')
             router.push('/login')

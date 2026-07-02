@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { apiService } from "@/lib/api-service"
+import { getAllCategories, getAllProducts } from "@/app/api/api-service"
 import {
   ALL_CATEGORY,
   CategoriesView,
@@ -25,16 +25,13 @@ export function Categories() {
     const loadCategories = async () => {
       setIsCategoriesLoading(true)
       try {
-        const response = await apiService.categories?.getAll?.()
-        const rawCategories = response?.data?.data || response?.data || []
+        const response = await getAllCategories()
+        const rawCategories = Array.isArray(response) ? response : (response?.data?.data || response?.data || [])
 
         const mappedCategories = rawCategories.map(mapApiCategoryToCategoryItem).filter(Boolean) as CategoryItem[]
 
         if (!cancelled && mappedCategories.length) {
-          const withAll = [ALL_CATEGORY, ...mappedCategories]
-          setCategories(withAll)
-          setActiveCategory(mappedCategories[0].name)
-          setActiveCategoryId(mappedCategories[0].id)
+          setCategories([ALL_CATEGORY, ...mappedCategories])
         }
       } catch (error) {
         console.error("Failed to fetch categories", error)
@@ -55,7 +52,7 @@ export function Categories() {
       setIsProductsLoading(true)
       try {
         const params = activeCategoryId ? { categoryId: activeCategoryId } : undefined
-        const response = await apiService.products.getAll(params)
+        const response = await getAllProducts(params)
         const rawData = response.data?.data || []
         const mappedProducts = rawData.map(mapApiProductToDisplayProduct) as DisplayProduct[]
 

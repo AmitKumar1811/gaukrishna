@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import { apiService } from './api-service'
+import { addToCart as apiAddToCart, removeFromCart as apiRemoveFromCart, updateCartItem as apiUpdateCartItem, clearCart as apiClearCart } from '../app/api/api-service'
 
 export interface CartItem {
   productId: string
@@ -46,7 +46,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addToCart = async (newItem: CartItem) => {
     try {
-      await apiService.cart.add({ productId: newItem.productId, quantity: newItem.quantity })
+      await apiAddToCart({ productId: newItem.productId, quantity: newItem.quantity })
     } catch (error) {
       console.error('Failed to sync add-to-cart with API:', error)
     }
@@ -70,7 +70,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const removeFromCart = async (productId: string, variantId: string) => {
     try {
-      await apiService.cart.remove(productId)
+      await apiRemoveFromCart(productId)
     } catch (error) {
       console.error('Failed to remove item from API cart:', error)
     }
@@ -89,7 +89,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      await apiService.cart.update({ productId, quantity })
+      await apiUpdateCartItem({ productId, quantity })
     } catch (error) {
       console.error('Failed to update quantity on API cart:', error)
     }
@@ -104,7 +104,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }
 
   const clearCart = () => {
-    apiService.cart.clear().catch((error) => console.error('Failed to clear API cart:', error))
+    apiClearCart().catch((error) => console.error('Failed to clear API cart:', error))
     setItems([])
   }
 

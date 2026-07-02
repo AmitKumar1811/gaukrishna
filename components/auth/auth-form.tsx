@@ -30,7 +30,7 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 // @ts-ignore
 import { signInWithGoogle } from "@/lib/firebaseAuth"
-import { authService } from "@/lib/auth-service"
+import { loginUser, registerUser, forgotPasswordUser, googleLoginUser } from "@/app/api/auth-service"
 
 const loginSchema = z.object({
     email: z.string().email({ message: "Invalid email address" }),
@@ -88,7 +88,7 @@ export function AuthForm() {
     async function onLoginSubmit(data: LoginValues) {
         setIsLoading(true)
         try {
-            const res = await authService.login(data)
+            const res = await loginUser(data)
             const token = res?.accessToken || res?.token
 
             if (token) {
@@ -117,7 +117,7 @@ export function AuthForm() {
                 phone: data.phone,
                 password: data.password
             }
-            const res = await authService.register(payload)
+            const res = await registerUser(payload)
             toast.success("Registration successful! Please login.")
             setActiveTab("login")
         } catch (error: any) {
@@ -131,7 +131,7 @@ export function AuthForm() {
     async function onForgotPasswordSubmit(data: ForgotPasswordValues) {
         setIsLoading(true)
         try {
-            await authService.forgotPassword(data.email)
+            await forgotPasswordUser(data.email)
             toast.success("Password reset link sent to your email.")
             setIsForgotPassword(false)
         } catch (error: any) {
@@ -158,9 +158,9 @@ export function AuthForm() {
                 }
             }
 
-            const res = await authService.googleLogin(payload)
-            if (res?.token) {
-                dispatch(setCredentials({ user: res.user, token: res.token })) // Update Redux state
+            const res = await googleLoginUser(payload)
+            if (res?.accessToken) {
+                dispatch(setCredentials({ user: res.user, token: res.accessToken })) // Update Redux state
                 toast.success("Google login successful!")
                 router.push("/")
                 router.refresh()

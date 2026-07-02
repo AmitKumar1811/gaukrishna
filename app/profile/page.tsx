@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { RootState } from '@/lib/store'
-import { userService } from '@/lib/user-service'
+import { updateProfile } from '@/app/api/user-service'
 import { setCredentials } from '@/lib/features/authSlice'
 import { toast } from 'sonner'
 import { Edit2, Save, X, User as UserIcon, Mail, Phone } from 'lucide-react'
@@ -101,7 +101,7 @@ export default function ProfilePage() {
 
         setIsLoading(true)
         try {
-            const updatedUser = await userService.updateProfile(formData)
+            const updatedUser = await updateProfile(formData)
             // Update Redux state
             if (user && token) {
                 dispatch(setCredentials({

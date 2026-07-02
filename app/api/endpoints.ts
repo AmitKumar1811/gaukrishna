@@ -1,0 +1,11 @@
+export const CART = "/cart";
+export const CATEGORIES = "/categories";
+export const ADDRESSES = "/addresses";
+export const ORDERS = "/orders";
+export const PAYMENTS = "/payments";
+export const PRODUCTS = "/products";
+export const USER = "/user";
+export const USERS = "/users";
+export const CONTACTS = "/contacts";
+export const AUTH = "/auth";
+export const WISHLIST = "/wishlist";

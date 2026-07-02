@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Edit2, Trash2, CheckCircle, Loader2, MapPin, Home as HomeIcon, Briefcase, MoreHorizontal, X } from 'lucide-react'
-import { userService, Address } from '@/lib/user-service'
+import { getAddresses, addAddress, updateAddress, deleteAddress, Address } from '@/app/api/user-service'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -77,7 +77,7 @@ export default function AddressesPage() {
 
     const fetchAddresses = async () => {
         try {
-            const data = await userService.getAddresses()
+            const data = await getAddresses()
             setAddresses(data)
         } catch (error) {
             console.error('Failed to fetch addresses:', error)
@@ -147,10 +147,10 @@ export default function AddressesPage() {
 
         try {
             if (editingId) {
-                await userService.updateAddress(editingId, formData)
+                await updateAddress(editingId, formData)
                 toast.success('Address updated successfully')
             } else {
-                await userService.addAddress(formData as Omit<Address, '_id' | 'id'>)
+                await addAddress(formData as Omit<Address, '_id' | 'id'>)
                 toast.success('Address added successfully')
             }
 
@@ -177,7 +177,7 @@ export default function AddressesPage() {
         if (!deleteId) return
 
         try {
-            await userService.deleteAddress(deleteId)
+            await deleteAddress(deleteId)
             toast.success('Address deleted successfully')
             setAddresses(addresses.filter((addr) => (addr._id || addr.id) !== deleteId))
             setDeleteId(null)
@@ -189,7 +189,7 @@ export default function AddressesPage() {
 
     const handleSetDefault = async (id: string) => {
         try {
-            await userService.updateAddress(id, { isDefault: true })
+            await updateAddress(id, { isDefault: true })
             toast.success('Default address updated')
             fetchAddresses()
         } catch (error: any) {

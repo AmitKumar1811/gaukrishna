@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { apiService } from '@/lib/api-service'
+import { getAllCategories, getAllProducts } from '@/app/api/api-service'
 import { Product, mapApiProductToProduct } from '@/lib/products'
 
 export type SearchParamsRecord = { [key: string]: string | string[] | undefined }
@@ -113,7 +113,7 @@ export function computeProductsPagination(opts: {
 
 export async function fetchCategories(): Promise<{ label: string; id: string }[]> {
   try {
-    const response = await apiService.categories.getAll()
+    const response = await getAllCategories()
     const rawData = response.data?.data || response.data || []
     return rawData
       .map((item: any) => ({
@@ -133,7 +133,39 @@ export async function fetchProducts(params?: Record<string, any>): Promise<{
   totalPages?: number
 }> {
   try {
-    const { data } = await apiService.products.getAll(params)
+    // Explicitly construct API params to ensure backend receives what it expects
+    const apiParams: Record<string, any> = {}
+
+    if (params) {
+      // Support both 'search' and 'q' as common backend search parameters
+      const searchVal = params.search || params.q
+      if (searchVal) {
+        apiParams.search = searchVal
+        apiParams.q = searchVal
+      }
+
+      // Handle Category
+      const catId = params.categoryId || params.category_id
+      if (catId) apiParams.category_id = catId
+      if (params.category) apiParams.category = params.category
+
+      // Handle Price Range
+      const minP = params.minPrice || params.min_price
+      const maxP = params.maxPrice || params.max_price
+      if (minP) apiParams.min_price = minP
+      if (maxP) apiParams.max_price = maxP
+
+      // Handle Flags
+      if (params.is_best_seller === 'true' || params.isBestSeller === true) apiParams.is_best_seller = true
+      if (params.is_new_launch === 'true' || params.isNewLaunch === true) apiParams.is_new_launch = true
+
+      // Handle Pagination
+      if (params.page) apiParams.page = params.page
+      if (params.limit) apiParams.limit = params.limit
+      if (params.tag) apiParams.tag = params.tag
+    }
+
+    const { data } = await getAllProducts(apiParams)
     const rawData = data?.data || []
     return {
       products: rawData.map(mapApiProductToProduct),

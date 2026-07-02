@@ -7,7 +7,15 @@ import { useCart } from '@/lib/cart-context'
 import { Button } from '@/components/ui/button'
 import { Check } from 'lucide-react'
 import Link from 'next/link'
-import { apiService } from '@/lib/api-service'
+import { 
+  getAllAddresses, 
+  createAddress, 
+  editAddress, 
+  removeAddress, 
+  placeOrderFromCart, 
+  createPaymentOrder, 
+  verifyPayment 
+} from '@/app/api/api-service'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Card } from '@/components/ui/card'
@@ -43,11 +51,12 @@ export default function CheckoutPage() {
     const loadAddresses = async () => {
       setIsLoadingAddresses(true)
       try {
-        const res = await apiService.addresses.getAll()
-        const list = res.data?.data || res.data || []
-        setAddresses(Array.isArray(list) ? list : [])
-        if (Array.isArray(list) && list.length > 0) {
-          setSelectedAddressId(list[0]._id || list[0].id)
+        const res = await getAllAddresses()
+        const list = Array.isArray(res) ? res : (res.data?.data || res.data || [])
+        setAddresses(list)
+        if (list.length > 0) {
+          const defaultAddr = list.find((a: any) => a.isDefault)
+          setSelectedAddressId(defaultAddr ? (defaultAddr._id || defaultAddr.id) : (list[0]._id || list[0].id))
         }
       } catch (error) {
         console.error('Failed to fetch addresses', error)
@@ -114,11 +123,11 @@ export default function CheckoutPage() {
     }
     try {
       if (editingAddressId) {
-        await apiService.addresses.update(editingAddressId, payload)
+        await editAddress(editingAddressId, payload)
       } else {
-        await apiService.addresses.create(payload)
+        await createAddress(payload)
       }
-      const res = await apiService.addresses.getAll()
+      const res = await getAllAddresses()
       const list = res.data?.data || res.data || []
       setAddresses(Array.isArray(list) ? list : [])
       const newId =
@@ -152,7 +161,7 @@ export default function CheckoutPage() {
 
   const handleDeleteAddress = async (addressId: string) => {
     try {
-      await apiService.addresses.remove(addressId)
+      await removeAddress(addressId)
       const updated = addresses.filter((a) => (a._id || a.id) !== addressId)
       setAddresses(updated)
       if (selectedAddressId === addressId) {
@@ -189,25 +198,26 @@ export default function CheckoutPage() {
     try {
       setPaymentLoading(true)
 
-      const backendOrder = await apiService.orders.placeFromCart({ addressId: selectedAddressId })
-      const resData = backendOrder.data?.data || backendOrder.data || {};
+      const backendOrder = await placeOrderFromCart({ addressId: selectedAddressId })
+      const resData = backendOrder.data || backendOrder || {};
       const appOrderId =
         resData?._id ||
         resData?.id ||
         resData?.orderId ||
         resData?.order?._id ||
         resData?.order?.id ||
-        backendOrder.data?.orderId;
+        backendOrder?.orderId ||
+        backendOrder?._id;
 
       if (!appOrderId) {
-        console.error('Missing order ID in response:', backendOrder.data);
+        console.error('Missing order ID in response:', backendOrder);
         throw new Error('Could not find order ID from checkout response');
       }
 
-      const orderRes = await apiService.payments.createOrder(appOrderId)
-      const rpOrderId = orderRes.data?.data?.id || orderRes.data?.orderId
-      const rpAmount = orderRes.data?.data?.amount || orderRes.data?.amount
-      const rpCurrency = orderRes.data?.data?.currency || orderRes.data?.currency || 'INR'
+      const orderRes = await createPaymentOrder(appOrderId)
+      const rpOrderId = orderRes.data?.id || orderRes.data?.orderId || orderRes.id || orderRes.orderId
+      const rpAmount = orderRes.data?.amount || orderRes.amount
+      const rpCurrency = orderRes.data?.currency || orderRes.currency || 'INR'
 
       const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || ''
       const loadRazorpay = () =>
@@ -233,7 +243,7 @@ export default function CheckoutPage() {
           order_id: rpOrderId,
           handler: async (response: any) => {
             try {
-              await apiService.payments.verify({
+              await verifyPayment({
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,

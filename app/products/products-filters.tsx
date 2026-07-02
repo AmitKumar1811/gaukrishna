@@ -114,8 +114,8 @@ export default function ProductsFilters({ categories, priceBounds, initialFilter
     const handler = setTimeout(() => {
       updateQuery(
         {
-          minPrice: priceRange[0] !== minBound ? String(priceRange[0]) : undefined,
-          maxPrice: priceRange[1] !== maxBound ? String(priceRange[1]) : undefined,
+          min_price: priceRange[0] !== minBound ? String(priceRange[0]) : undefined,
+          max_price: priceRange[1] !== maxBound ? String(priceRange[1]) : undefined,
         },
         true
       )
@@ -127,12 +127,12 @@ export default function ProductsFilters({ categories, priceBounds, initialFilter
   const handleCategoryChange = (value: string) => {
     setSelectedCategory(value)
     if (value === 'all') {
-      updateQuery({ category: undefined, categoryId: undefined })
+      updateQuery({ category: undefined, category_id: undefined })
       return
     }
     const selected = categories.find((c) => (c.id ?? c.label) === value)
     updateQuery({
-      categoryId: selected?.id,
+      category_id: selected?.id,
       category: selected?.id ? undefined : selected?.label.toLowerCase(),
     })
   }

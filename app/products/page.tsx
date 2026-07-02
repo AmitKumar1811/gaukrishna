@@ -22,8 +22,10 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const query = parseProductsPageQuery(resolvedSearchParams)
   const priceBounds = { min: 0, max: 10000 }
 
-  const apiParams: Record<string, any> = { ...resolvedSearchParams, page: query.page, limit: query.limit }
-  const [productsResult, uniqueCategories] = await Promise.all([fetchProducts(apiParams), fetchCategories()])
+  const [productsResult, uniqueCategories] = await Promise.all([
+    fetchProducts(resolvedSearchParams),
+    fetchCategories()
+  ])
 
   const products = productsResult.products
   const title = getProductsPageTitle(query, products)
