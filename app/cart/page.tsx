@@ -9,11 +9,11 @@ import Link from 'next/link'
 import { getCart } from '@/app/api/api-service'
 
 export default function CartPage() {
-  const { items, removeFromCart, updateQuantity, totalPrice, clearCart } = useCart()
+  const { items, removeFromCart, updateQuantity, totalPrice, clearCart, syncCart } = useCart()
   const [serverCartLoading, setServerCartLoading] = useState(true)
 
   useEffect(() => {
-    const fetchServerCart = async () => {
+    const syncWithServer = async () => {
       const token = localStorage.getItem('token')
       if (!token) {
         setServerCartLoading(false)
@@ -21,21 +21,15 @@ export default function CartPage() {
       }
 
       try {
-        const response = await getCart()
-        const data = response.data?.data || response.data || response
-        console.log('Server cart data fetched from nodejs:', data)
-        
-        if (data && (!data.items || data.items.length === 0)) {
-          clearCart()
-        }
+        await syncCart()
       } catch (error) {
-        console.error('Failed to fetch API cart:', error)
+        console.error('Failed to sync API cart:', error)
       } finally {
         setServerCartLoading(false)
       }
     }
 
-    fetchServerCart()
+    syncWithServer()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

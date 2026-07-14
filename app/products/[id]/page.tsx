@@ -4,7 +4,7 @@ import { Footer } from '@/components/footer'
 import { Product, mapApiProductToProduct } from '@/lib/products'
 import { useCart } from '@/lib/cart-context'
 import { Button } from '@/components/ui/button'
-import { Star, Check } from 'lucide-react'
+import { Star, Check, Minus, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -16,9 +16,8 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   const productId = resolvedParams.id
 
   const [product, setProduct] = useState<Product | null>(null)
-  const { addToCart } = useCart()
+  const { items, addToCart, updateQuantity } = useCart()
   const [selectedVariant, setSelectedVariant] = useState<Product['variants'][number] | null>(null)
-  const [quantity, setQuantity] = useState(1)
   const [addedToCart, setAddedToCart] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isZoomed, setIsZoomed] = useState(false)
@@ -62,10 +61,56 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
-        <main className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-primary mb-2">Loading product...</h1>
-            <p className="text-muted-foreground">Please wait a moment.</p>
+        <main className="flex-1">
+          <div className="max-w-6xl mx-auto px-4 py-8 animate-pulse">
+            {/* Breadcrumb Skeleton */}
+            <div className="h-4 bg-gray-200 rounded w-1/4 mb-6"></div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+              {/* Image Skeleton */}
+              <div className="flex flex-col gap-4">
+                <div className="h-[500px] bg-gray-200 rounded-lg w-full"></div>
+                <div className="flex gap-4">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="w-20 h-20 bg-gray-200 rounded-lg flex-shrink-0"></div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Info Skeleton */}
+              <div>
+                {/* Title */}
+                <div className="h-10 bg-gray-200 rounded w-3/4 mb-4"></div>
+                {/* Rating */}
+                <div className="h-4 bg-gray-200 rounded w-1/3 mb-8"></div>
+                
+                {/* Description */}
+                <div className="space-y-3 mb-8">
+                  <div className="h-4 bg-gray-200 rounded w-full"></div>
+                  <div className="h-4 bg-gray-200 rounded w-full"></div>
+                  <div className="h-4 bg-gray-200 rounded w-4/5"></div>
+                </div>
+
+                {/* Price */}
+                <div className="h-12 bg-gray-200 rounded w-1/3 mb-8"></div>
+
+                {/* Buttons */}
+                <div className="flex gap-4 mb-8">
+                  <div className="h-12 bg-gray-200 rounded flex-1"></div>
+                  <div className="h-12 bg-gray-200 rounded flex-1"></div>
+                </div>
+
+                {/* Benefits */}
+                <div className="border-t border-gray-200 pt-6">
+                  <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+                  <div className="space-y-3">
+                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                    <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </main>
         <Footer />
@@ -90,21 +135,19 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
     )
   }
 
-  const handleAddToCart = async () => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      router.push('/login')
-      return
-    }
+  const cartItem = product && selectedVariant ? items.find(item => item.productId === product.id && item.variantId === selectedVariant.id) : null;
+  const cartQuantity = cartItem?.quantity || 0;
+  const displayQuantity = Math.max(1, cartQuantity);
 
-    if (selectedVariant) {
+  const handleAddToCart = async () => {
+    if (selectedVariant && product) {
       await addToCart({
         productId: product.id,
         variantId: selectedVariant.id,
         productName: product.name,
         size: selectedVariant.size,
         price: selectedVariant.price,
-        quantity,
+        quantity: 1,
       })
       setAddedToCart(true)
       setTimeout(() => setAddedToCart(false), 2000)
@@ -112,22 +155,8 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   }
 
   const handleBuyNow = async () => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      router.push('/login')
-      return
-    }
-
-    if (selectedVariant) {
-      await addToCart({
-        productId: product.id,
-        variantId: selectedVariant.id,
-        productName: product.name,
-        size: selectedVariant.size,
-        price: selectedVariant.price,
-        quantity,
-      })
-      router.push('/checkout')
+    if (selectedVariant && product) {
+      router.push(`/checkout?type=buynow&productId=${product.id}&quantity=${displayQuantity}`)
     }
   }
 
@@ -256,11 +285,11 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                   )}
                   <div className="flex items-baseline gap-2 mb-2">
                     <span className="text-3xl font-bold text-primary">
-                      ₹{(selectedVariant.price * quantity).toLocaleString()}
+                      ₹{(selectedVariant.price * displayQuantity).toLocaleString()}
                     </span>
                     {selectedVariant.originalPrice > selectedVariant.price && (
                       <span className="text-lg text-muted-foreground line-through">
-                        ₹{(selectedVariant.originalPrice * quantity).toLocaleString()}
+                        ₹{(selectedVariant.originalPrice * displayQuantity).toLocaleString()}
                       </span>
                     )}
                   </div>
@@ -269,51 +298,48 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                       Save ₹
                       {(
                         (selectedVariant.originalPrice - selectedVariant.price) *
-                        quantity
+                        displayQuantity
                       ).toLocaleString()}
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Quantity */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Quantity
-                </label>
-                <div className="flex items-center gap-2 w-fit">
-                  <button
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="w-10 h-10 border border-border rounded-lg hover:border-primary flex items-center justify-center"
-                  >
-                    −
-                  </button>
-                  <span className="w-8 text-center font-semibold">{quantity}</span>
-                  <button
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="w-10 h-10 border border-border rounded-lg hover:border-primary flex items-center justify-center"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
               {/* Buttons */}
               <div className="flex gap-4 mb-8">
-                <Button
-                  onClick={handleAddToCart}
-                  variant="outline"
-                  size="lg"
-                  className="flex-1 border-[#1a5f48] text-[#1a5f48] hover:bg-[#1a5f48] hover:text-white font-bold h-12 text-sm tracking-wider uppercase rounded-md transition-colors"
-                >
-                  {addedToCart ? (
-                    <span className="flex items-center gap-2">
-                      <Check size={20} /> Added to Cart
-                    </span>
-                  ) : (
-                    'Add to Cart'
-                  )}
-                </Button>
+                {cartQuantity > 0 ? (
+                  <div className="flex-1 flex items-center justify-between border-2 border-[#1a5f48] rounded-md px-4 h-12 bg-white">
+                    <button 
+                      onClick={() => updateQuantity(product!.id, selectedVariant.id, cartQuantity - 1)} 
+                      className="p-1 hover:bg-[#f0f0f0] rounded-md transition-colors text-[#1a5f48]"
+                    >
+                      <Minus size={20} />
+                    </button>
+                    <span className="font-bold text-[#1a5f48] text-lg text-center">{cartQuantity}</span>
+                    <button 
+                      onClick={() => updateQuantity(product!.id, selectedVariant.id, cartQuantity + 1)} 
+                      className="p-1 hover:bg-[#f0f0f0] rounded-md transition-colors text-[#1a5f48]"
+                    >
+                      <Plus size={20} />
+                    </button>
+                  </div>
+                ) : (
+                  <Button
+                    onClick={handleAddToCart}
+                    variant="outline"
+                    size="lg"
+                    className="flex-1 border-[#1a5f48] text-[#1a5f48] hover:bg-[#1a5f48] hover:text-white font-bold h-12 text-sm tracking-wider uppercase rounded-md transition-colors"
+                  >
+                    {addedToCart ? (
+                      <span className="flex items-center gap-2">
+                        <Check size={20} /> Added to Cart
+                      </span>
+                    ) : (
+                      'Add to Cart'
+                    )}
+                  </Button>
+                )}
+                
                 <Button
                   onClick={handleBuyNow}
                   size="lg"

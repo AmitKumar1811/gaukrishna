@@ -1,6 +1,8 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { LayoutGrid, Star, TrendingUp, Zap } from 'lucide-react'
+import { LayoutGrid, Star, TrendingUp, Zap, Minus, Plus } from 'lucide-react'
+import { useCart } from '@/lib/cart-context'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { iconMap } from '@/lib/fallback-data'
 
@@ -158,15 +160,13 @@ function CategoriesRow({
   const circleBase = isMobile ? 'h-14 w-14' : 'h-16 w-16'
   const iconClassName = isMobile ? 'h-6 w-6' : 'h-7 w-7'
   const circleClassNameFor = (isActive: boolean) =>
-    `${circleBase} flex items-center justify-center rounded-full border-2 transition-all duration-300 ${
-      isActive
-        ? 'bg-[#1a5f48] border-[#1a5f48] text-white'
-        : `bg-white border-[#1a5f48] text-[#1a5f48]${isMobile ? '' : ' hover:bg-[#e8f3ee]'}`
+    `${circleBase} flex items-center justify-center rounded-full border-2 transition-all duration-300 ${isActive
+      ? 'bg-[#1a5f48] border-[#1a5f48] text-white'
+      : `bg-white border-[#1a5f48] text-[#1a5f48]${isMobile ? '' : ' hover:bg-[#e8f3ee]'}`
     }`
 
   const labelClassName = (isActive: boolean) =>
-    `${isMobile ? 'text-xs' : 'text-sm'} font-semibold tracking-wide${isMobile ? ' whitespace-nowrap' : ''} ${
-      isActive ? 'text-[#1a5f48]' : 'text-gray-600'
+    `${isMobile ? 'text-xs' : 'text-sm'} font-semibold tracking-wide${isMobile ? ' whitespace-nowrap' : ''} ${isActive ? 'text-[#1a5f48]' : 'text-gray-600'
     }`
 
   return (
@@ -217,6 +217,40 @@ function ProductSkeleton({ count }: { count: number }) {
 }
 
 function ProductTile({ product }: { product: DisplayProduct }) {
+  const { items, addToCart, updateQuantity } = useCart()
+  const router = useRouter()
+
+  const cartItem = items.find(item => item.productId === String(product.id))
+  const cartQuantity = cartItem?.quantity || 0
+
+  const handleAdd = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    await addToCart({
+      productId: String(product.id),
+      variantId: cartItem?.variantId || 'default',
+      productName: product.name,
+      size: product.weight || 'Standard',
+      price: product.price,
+      quantity: 1
+    })
+  }
+
+  const handleUpdate = async (e: React.MouseEvent, newQuantity: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (cartItem) {
+      await updateQuantity(cartItem.productId, cartItem.variantId, newQuantity)
+    }
+  }
+
+  const handleBuyNow = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const qty = Math.max(1, cartQuantity)
+    router.push(`/checkout?type=buynow&productId=${product.id}&quantity=${qty}`)
+  }
+
   return (
     <div className="min-w-[260px] md:min-w-0 snap-center group relative bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col">
       {product.discount && (
@@ -250,9 +284,8 @@ function ProductTile({ product }: { product: DisplayProduct }) {
         <div className="flex items-center justify-between min-h-[24px]">
           {product.label && (
             <div
-              className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold ${
-                product.badgeType === 'trending' ? 'bg-[#e7f5ef] text-[#1a5f48]' : 'bg-[#fff4e5] text-[#b96b00]'
-              }`}
+              className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold ${product.badgeType === 'trending' ? 'bg-[#e7f5ef] text-[#1a5f48]' : 'bg-[#fff4e5] text-[#b96b00]'
+                }`}
             >
               {product.badgeType === 'trending' ? <TrendingUp className="h-3 w-3" /> : <Zap className="h-3 w-3 fill-current" />}
               {product.label}
@@ -275,15 +308,29 @@ function ProductTile({ product }: { product: DisplayProduct }) {
             <span className="text-xs text-gray-400 line-through">₹{product.originalPrice.toLocaleString()}</span>
             <span className="text-lg font-bold text-gray-900">₹{product.price.toLocaleString()}</span>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-[60%]">
+            {cartQuantity > 0 ? (
+              <div className="flex-1 flex items-center justify-between border border-[#1a5f48] rounded-md px-1 h-8 bg-white" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                <button onClick={(e) => handleUpdate(e, cartQuantity - 1)} className="p-0.5 hover:bg-[#f0f0f0] rounded-sm transition-colors text-[#1a5f48]">
+                  <Minus size={14} />
+                </button>
+                <span className="font-bold text-[#1a5f48] text-[13px] text-center">{cartQuantity}</span>
+                <button onClick={(e) => handleUpdate(e, cartQuantity + 1)} className="p-0.5 hover:bg-[#f0f0f0] rounded-sm transition-colors text-[#1a5f48]">
+                  <Plus size={14} />
+                </button>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={handleAdd}
+                className="border-[#1a5f48] text-[#1a5f48] hover:bg-[#1a5f48] hover:text-white font-bold h-8 px-2 text-xs tracking-wider uppercase rounded-md transition-colors flex-1"
+              >
+                ADD
+              </Button>
+            )}
             <Button
-              variant="outline"
-              className="border-[#1a5f48] text-[#1a5f48] hover:bg-[#1a5f48] hover:text-white font-bold h-8 px-3 text-xs tracking-wider uppercase rounded-md transition-colors flex-1"
-            >
-              ADD
-            </Button>
-            <Button
-              className="bg-[#1a5f48] text-white hover:bg-[#154d3b] font-bold h-8 px-3 text-xs tracking-wider uppercase rounded-md transition-colors flex-1"
+              onClick={handleBuyNow}
+              className="bg-[#1a5f48] text-white hover:bg-[#154d3b] font-bold h-8 px-2 text-xs tracking-wider uppercase rounded-md transition-colors flex-1"
             >
               BUY NOW
             </Button>
@@ -342,7 +389,7 @@ export function CategoriesView({
             href="/products"
             className="inline-flex items-center gap-2 px-6 py-2.5 bg-white text-[#1a5f48] font-bold border border-[#1a5f48] rounded-full hover:bg-[#1a5f48] hover:text-white transition-all shadow-sm text-sm"
           >
-            View All Products →
+            View All Products  →
           </Link>
         </div>
       </div>

@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useEffect, useState } from "react"
-import { useRouter } from 'next/navigation'
+import React, { useEffect, useState, Suspense } from "react"
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Footer } from '@/components/footer'
 import { useCart } from '@/lib/cart-context'
 import { Button } from '@/components/ui/button'
@@ -13,8 +13,11 @@ import {
   editAddress, 
   removeAddress, 
   placeOrderFromCart, 
+  buyNow,
   createPaymentOrder, 
-  verifyPayment 
+  verifyPayment,
+  checkStock,
+  getProductById
 } from '@/app/api/api-service'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -22,9 +25,9 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
-export default function CheckoutPage() {
+function CheckoutForm() {
   const router = useRouter()
-  const { items, totalPrice, clearCart } = useCart()
+  const { items, totalPrice, clearCart, syncCart } = useCart()
   const [addresses, setAddresses] = useState<any[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(true)
@@ -47,7 +50,42 @@ export default function CheckoutPage() {
   const [placingOrder, setPlacingOrder] = useState(false)
   const [paymentLoading, setPaymentLoading] = useState(false)
 
+  const searchParams = useSearchParams()
+  const isBuyNow = searchParams?.get('type') === 'buynow'
+  const buyNowProductId = searchParams?.get('productId')
+  const buyNowQuantity = searchParams?.get('quantity') ? parseInt(searchParams?.get('quantity') as string, 10) : 1
+  const [buyNowProduct, setBuyNowProduct] = useState<any>(null)
+
   useEffect(() => {
+    if (isBuyNow && buyNowProductId) {
+      getProductById(buyNowProductId).then(res => {
+        const productData = res.data?.data || res.data;
+        setBuyNowProduct(productData);
+      }).catch(console.error)
+    }
+  }, [isBuyNow, buyNowProductId])
+
+  const displayItems = isBuyNow && buyNowProduct ? [{
+    productId: buyNowProductId as string,
+    variantId: 'default',
+    productName: buyNowProduct.name || buyNowProduct.title || 'Product',
+    size: 'Default',
+    price: buyNowProduct.price || 0,
+    quantity: buyNowQuantity
+  }] : items;
+
+  const displayTotalPrice = isBuyNow && buyNowProduct ? ((buyNowProduct.price || 0) * buyNowQuantity) : totalPrice;
+
+  useEffect(() => {
+    const initCheckout = async () => {
+      if (isBuyNow) return; // Do not sync cart for buy now
+      try {
+        await syncCart()
+      } catch (error) {
+        console.error('Failed to sync API cart before checkout:', error)
+      }
+    }
+    
     const loadAddresses = async () => {
       setIsLoadingAddresses(true)
       try {
@@ -64,10 +102,13 @@ export default function CheckoutPage() {
         setIsLoadingAddresses(false)
       }
     }
+
+    initCheckout()
     loadAddresses()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  if (items.length === 0 && !orderPlaced) {
+  if (displayItems.length === 0 && !orderPlaced && !isBuyNow) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <main className="flex-1 flex items-center justify-center">
@@ -189,16 +230,45 @@ export default function CheckoutPage() {
       addressLine2: selectedAddress.addressLine2 || selectedAddress.landmark || selectedAddress.area || '',
       city: selectedAddress.city || '',
       state: selectedAddress.state || '',
-      country: selectedAddress.country || 'India',
       pincode: selectedAddress.pincode || '',
-      isDefault: selectedAddress.isDefault ?? false,
     }
 
     setPlacingOrder(true)
     try {
-      setPaymentLoading(true)
+      let backendOrder;
+      
+      if (isBuyNow && buyNowProductId) {
+        // Buy Now flow ignores local storage and sends payload directly
+        backendOrder = await buyNow({
+          productId: buyNowProductId,
+          quantity: buyNowQuantity,
+          address: normalizedAddress
+        });
+      } else {
+        // Soft check for out of stock
+        try {
+          const stockItems = items.map(item => ({ productId: item.productId, quantity: item.quantity }));
+          const res = await checkStock(stockItems);
+          if (res && res.success === false) {
+             alert(res.message || "Some items in your cart are out of stock or the requested quantity is not available. Please review your cart.");
+             setPlacingOrder(false);
+             return;
+          }
+        } catch (stockError: any) {
+          alert(stockError.response?.data?.message || stockError.message || "Some items in your cart are out of stock or the requested quantity is not available. Please review your cart.");
+          setPlacingOrder(false);
+          return;
+        }
 
-      const backendOrder = await placeOrderFromCart({ addressId: selectedAddressId })
+        setPaymentLoading(true)
+
+        // Cart Checkout flow
+        backendOrder = await placeOrderFromCart({ 
+          items: items.map(i => ({ productId: i.productId, quantity: i.quantity })),
+          address: normalizedAddress 
+        });
+      }
+
       const resData = backendOrder.data || backendOrder || {};
       const appOrderId =
         resData?._id ||
@@ -277,8 +347,8 @@ export default function CheckoutPage() {
     }
   }
 
-  const taxAmount = Math.round(totalPrice * 0.18)
-  const finalTotal = totalPrice + taxAmount
+  const taxAmount = Math.round(displayTotalPrice * 0.18)
+  const finalTotal = displayTotalPrice + taxAmount
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -519,7 +589,7 @@ export default function CheckoutPage() {
                 <div className="bg-card border border-border rounded-lg p-6">
                   <h2 className="text-xl font-bold text-foreground mb-4">Order Items</h2>
                   <div className="space-y-3">
-                    {items.map((item) => (
+                    {displayItems.map((item) => (
                       <div
                         key={`${item.productId}-${item.variantId}`}
                         className="flex justify-between items-center pb-3 border-b border-border last:border-0"
@@ -553,7 +623,7 @@ export default function CheckoutPage() {
                 <h2 className="text-lg font-bold text-foreground mb-6">Order Summary</h2>
 
                 <div className="space-y-3 mb-6 pb-6 border-b border-border">
-                  {items.map((item) => (
+                  {displayItems.map((item) => (
                     <div key={`${item.productId}-${item.variantId}`} className="text-sm">
                       <div className="flex justify-between mb-1">
                         <span className="text-muted-foreground">
@@ -570,7 +640,7 @@ export default function CheckoutPage() {
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span className="text-foreground">₹{totalPrice.toLocaleString()}</span>
+                    <span className="text-foreground">₹{displayTotalPrice.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Shipping</span>
@@ -597,5 +667,13 @@ export default function CheckoutPage() {
       </main>
       <Footer />
     </div>
+  )
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<div>Loading checkout...</div>}>
+      <CheckoutForm />
+    </Suspense>
   )
 }

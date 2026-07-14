@@ -101,12 +101,12 @@ export const removeAddress = async (addressId: string) => {
     }
 };
 
-export const placeOrderFromCart = async (data: { addressId: string }) => {
+export const placeOrderFromCart = async (data: { items: any[], address: any }) => {
     try {
-        const response = await apiClient.post(`${ORDERS}/cart`, data);
+        const response = await apiClient.post(ORDERS, data);
         return response.data;
     } catch (error) {
-        console.error("❌ Error placing order from cart:", error);
+        console.error("❌ Error placing order:", error);
         throw error;
     }
 };
@@ -213,6 +213,16 @@ export const createContact = async (data: { name: string; email: string; subject
         return response.data;
     } catch (error) {
         console.error("❌ Error creating contact:", error);
+        throw error;
+    }
+};
+
+export const checkStock = async (items: any[]) => {
+    try {
+        const response = await apiClient.post(`${PRODUCTS}/check-stock`, { items });
+        return response.data;
+    } catch (error) {
+        console.error("❌ Error checking stock:", error);
         throw error;
     }
 };

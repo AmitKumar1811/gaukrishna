@@ -35,8 +35,8 @@ apiClient.interceptors.response.use(
         if (error.response && error.response.status === 401) {
             if (typeof window !== 'undefined') {
                 // Optional: Logout user on 401
-                // localStorage.removeItem('token');
-                // window.location.href = '/login';
+                localStorage.removeItem('token');
+                window.location.href = '/login';
             }
         }
         return Promise.reject(error);
