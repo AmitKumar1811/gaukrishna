@@ -241,3 +241,23 @@ export const getOrderById = async (id: string) => {
         throw error;
     }
 };
+
+export const getAllBlogs = async () => {
+    try {
+        const response = await apiClient.get('/blogs');
+        return response.data;
+    } catch (error) {
+        console.error("❌ Error fetching blogs:", error);
+        throw error;
+    }
+};
+
+export const getBlogBySlug = async (slug: string) => {
+    try {
+        const response = await apiClient.get(`/blogs/${slug}`);
+        return response.data;
+    } catch (error) {
+        console.error("❌ Error fetching blog by slug:", error);
+        throw error;
+    }
+};

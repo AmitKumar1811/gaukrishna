@@ -116,13 +116,6 @@ export default function OrderPage() {
                                         View Details
                                     </button>
                                 </Link>
-                                {['shipped', 'transit', 'in transit'].includes(order.status.toLowerCase()) && (
-                                    <Link href={`/track-order?orderId=${order.orderId}`}>
-                                        <button className="px-4 py-2 text-sm font-medium text-white bg-[#1a5f48] rounded hover:bg-[#154d3b] transition-colors">
-                                            Track Order
-                                        </button>
-                                    </Link>
-                                )}
                                 {order.status.toLowerCase() === 'delivered' && (
                                     <Link href="/products">
                                         <button className="px-4 py-2 text-sm font-medium text-white bg-[#1a5f48] rounded hover:bg-[#154d3b] transition-colors">

@@ -63,11 +63,10 @@ export default function OrderDetailsPage() {
                                 <p className="text-sm text-gray-500">Placed on {dateStr}</p>
                             </div>
                             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                                <span className={`px-4 py-2 rounded-full text-sm font-semibold tracking-wide ${
-                                    displayStatus === 'Delivered' ? 'bg-green-100 text-green-700' :
-                                    ['Shipped', 'Transit', 'In transit'].includes(displayStatus) ? 'bg-blue-50 text-blue-700' :
-                                    'bg-yellow-50 text-yellow-700'
-                                }`}>
+                                <span className={`px-4 py-2 rounded-full text-sm font-semibold tracking-wide ${displayStatus === 'Delivered' ? 'bg-green-100 text-green-700' :
+                                        ['Shipped', 'Transit', 'In transit'].includes(displayStatus) ? 'bg-blue-50 text-blue-700' :
+                                            'bg-yellow-50 text-yellow-700'
+                                    }`}>
                                     {displayStatus}
                                 </span>
                                 {['Shipped', 'Transit', 'In transit'].includes(displayStatus) && (
@@ -149,7 +148,6 @@ export default function OrderDetailsPage() {
                     </div>
                 </div>
             </main>
-            <Footer />
         </div>
     )
 }
