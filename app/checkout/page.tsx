@@ -17,8 +17,10 @@ import {
   createPaymentOrder, 
   verifyPayment,
   checkStock,
-  getProductById
+  getProductById,
+  validateCoupon
 } from '@/app/api/api-service'
+import { clearStoredCoupon, getStoredCoupon, storeCoupon, type AppliedCoupon } from '@/lib/coupon-storage'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Card } from '@/components/ui/card'
@@ -49,6 +51,10 @@ function CheckoutForm() {
   const [orderPlaced, setOrderPlaced] = useState(false)
   const [placingOrder, setPlacingOrder] = useState(false)
   const [paymentLoading, setPaymentLoading] = useState(false)
+  const [couponCode, setCouponCode] = useState('')
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null)
+  const [couponError, setCouponError] = useState('')
+  const [couponLoading, setCouponLoading] = useState(false)
 
   const searchParams = useSearchParams()
   const isBuyNow = searchParams?.get('type') === 'buynow'
@@ -105,8 +111,35 @@ function CheckoutForm() {
 
     initCheckout()
     loadAddresses()
+    const stored = getStoredCoupon()
+    if (stored) {
+      setAppliedCoupon(stored)
+      setCouponCode(stored.code)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    const stored = getStoredCoupon()
+    if (!stored || !displayTotalPrice) return
+    validateCoupon({ code: stored.code, subtotal: displayTotalPrice })
+      .then((result) => {
+        const applied: AppliedCoupon = {
+          code: result.code,
+          discount: result.discount,
+          shippingFee: result.shippingFee,
+          total: result.total,
+          message: result.message,
+        }
+        setAppliedCoupon(applied)
+        storeCoupon(applied)
+      })
+      .catch((error: any) => {
+        setAppliedCoupon(null)
+        clearStoredCoupon()
+        setCouponError(error.response?.data?.message || 'Coupon is no longer valid')
+      })
+  }, [displayTotalPrice])
 
   if (displayItems.length === 0 && !orderPlaced && !isBuyNow) {
     return (
@@ -242,7 +275,8 @@ function CheckoutForm() {
         backendOrder = await buyNow({
           productId: buyNowProductId,
           quantity: buyNowQuantity,
-          address: normalizedAddress
+          address: normalizedAddress,
+          couponCode: appliedCoupon?.code
         });
       } else {
         // Soft check for out of stock
@@ -265,7 +299,8 @@ function CheckoutForm() {
         // Cart Checkout flow
         backendOrder = await placeOrderFromCart({ 
           items: items.map(i => ({ productId: i.productId, quantity: i.quantity })),
-          address: normalizedAddress 
+          address: normalizedAddress,
+          couponCode: appliedCoupon?.code
         });
       }
 
@@ -337,6 +372,7 @@ function CheckoutForm() {
 
       const orderId = appOrderId || 'ORDER'
       clearCart()
+      clearStoredCoupon()
       setOrderPlaced(true)
       router.push(`/order-success?orderId=${orderId}`)
     } catch (error) {
@@ -347,8 +383,43 @@ function CheckoutForm() {
     }
   }
 
-  const taxAmount = Math.round(displayTotalPrice * 0.18)
-  const finalTotal = displayTotalPrice + taxAmount
+  const handleApplyCoupon = async () => {
+    setCouponError('')
+    if (!couponCode.trim()) {
+      setCouponError('Enter a coupon code')
+      return
+    }
+    setCouponLoading(true)
+    try {
+      const result = await validateCoupon({ code: couponCode.trim(), subtotal: displayTotalPrice })
+      const applied: AppliedCoupon = {
+        code: result.code,
+        discount: result.discount,
+        shippingFee: result.shippingFee,
+        total: result.total,
+        message: result.message,
+      }
+      setAppliedCoupon(applied)
+      storeCoupon(applied)
+    } catch (error: any) {
+      setAppliedCoupon(null)
+      clearStoredCoupon()
+      setCouponError(error.response?.data?.message || 'Invalid coupon')
+    } finally {
+      setCouponLoading(false)
+    }
+  }
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null)
+    setCouponCode('')
+    setCouponError('')
+    clearStoredCoupon()
+  }
+
+  const deliveryFee = appliedCoupon ? appliedCoupon.shippingFee : (displayTotalPrice < 500 ? 50 : 0)
+  const discount = appliedCoupon?.discount || 0
+  const finalTotal = appliedCoupon ? appliedCoupon.total : displayTotalPrice + deliveryFee
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -637,18 +708,53 @@ function CheckoutForm() {
                   ))}
                 </div>
 
+                <div className="mb-5">
+                  <label className="text-sm font-semibold text-foreground mb-2 block">Coupon</label>
+                  <div className="flex gap-2">
+                    <input
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                      placeholder="Enter code"
+                      className="flex-1 border border-border rounded-md px-3 py-2 text-sm uppercase"
+                      disabled={Boolean(appliedCoupon)}
+                    />
+                    {appliedCoupon ? (
+                      <button type="button" onClick={handleRemoveCoupon} className="text-sm font-semibold text-destructive">
+                        Remove
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleApplyCoupon}
+                        disabled={couponLoading}
+                        className="px-3 py-2 rounded-md bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-60"
+                      >
+                        {couponLoading ? '...' : 'Apply'}
+                      </button>
+                    )}
+                  </div>
+                  {couponError && <p className="text-xs text-destructive mt-2">{couponError}</p>}
+                  {appliedCoupon && <p className="text-xs text-primary mt-2">{appliedCoupon.message || `${appliedCoupon.code} applied`}</p>}
+                </div>
+
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Subtotal</span>
                     <span className="text-foreground">₹{displayTotalPrice.toLocaleString()}</span>
                   </div>
+                  {discount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Coupon ({appliedCoupon?.code})</span>
+                      <span className="text-primary font-semibold">-₹{discount.toLocaleString()}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Shipping</span>
-                    <span className="text-foreground">Free</span>
+                    <span className="text-foreground">{deliveryFee > 0 ? `₹${deliveryFee}` : 'Free'}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Tax (18%)</span>
-                    <span className="text-foreground">₹{taxAmount.toLocaleString()}</span>
+                    <span className="text-muted-foreground">Tax</span>
+                    <span className="text-foreground">Included in price</span>
                   </div>
                 </div>
 

@@ -1,5 +1,11 @@
 
 import { Footer } from '@/components/footer'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Our Story - Gau Krishna',
+  description: 'Learn about the journey of Gau Krishna, from native geographies to the time-tested traditional Bilona methods.',
+}
 
 export default function StoryPage() {
     return (

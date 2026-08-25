@@ -6,11 +6,16 @@ import { useCart } from '@/lib/cart-context'
 import { Button } from '@/components/ui/button'
 import { Trash2, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
-import { getCart } from '@/app/api/api-service'
+import { validateCoupon } from '@/app/api/api-service'
+import { clearStoredCoupon, getStoredCoupon, storeCoupon, type AppliedCoupon } from '@/lib/coupon-storage'
 
 export default function CartPage() {
   const { items, removeFromCart, updateQuantity, totalPrice, clearCart, syncCart } = useCart()
   const [serverCartLoading, setServerCartLoading] = useState(true)
+  const [couponCode, setCouponCode] = useState('')
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null)
+  const [couponError, setCouponError] = useState('')
+  const [couponLoading, setCouponLoading] = useState(false)
 
   useEffect(() => {
     const syncWithServer = async () => {
@@ -30,8 +35,78 @@ export default function CartPage() {
     }
 
     syncWithServer()
+    const stored = getStoredCoupon()
+    if (stored) {
+      setAppliedCoupon(stored)
+      setCouponCode(stored.code)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    const stored = getStoredCoupon()
+    if (!stored || !totalPrice) return
+    validateCoupon({ code: stored.code, subtotal: totalPrice })
+      .then((result) => {
+        const applied: AppliedCoupon = {
+          code: result.code,
+          discount: result.discount,
+          shippingFee: result.shippingFee,
+          total: result.total,
+          message: result.message,
+        }
+        setAppliedCoupon(applied)
+        storeCoupon(applied)
+        setCouponError('')
+      })
+      .catch((error: any) => {
+        setAppliedCoupon(null)
+        clearStoredCoupon()
+        setCouponError(error.response?.data?.message || 'Coupon is no longer valid')
+      })
+  }, [totalPrice])
+
+  const handleApplyCoupon = async () => {
+    setCouponError('')
+    if (!couponCode.trim()) {
+      setCouponError('Enter a coupon code')
+      return
+    }
+    if (!localStorage.getItem('token')) {
+      setCouponError('Please login to apply a coupon')
+      return
+    }
+    setCouponLoading(true)
+    try {
+      const result = await validateCoupon({ code: couponCode.trim(), subtotal: totalPrice })
+      const applied: AppliedCoupon = {
+        code: result.code,
+        discount: result.discount,
+        shippingFee: result.shippingFee,
+        total: result.total,
+        message: result.message,
+      }
+      setAppliedCoupon(applied)
+      storeCoupon(applied)
+    } catch (error: any) {
+      setAppliedCoupon(null)
+      clearStoredCoupon()
+      setCouponError(error.response?.data?.message || 'Invalid coupon')
+    } finally {
+      setCouponLoading(false)
+    }
+  }
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null)
+    setCouponCode('')
+    setCouponError('')
+    clearStoredCoupon()
+  }
+
+  const shippingFee = appliedCoupon ? appliedCoupon.shippingFee : (totalPrice < 500 ? 50 : 0)
+  const discount = appliedCoupon?.discount || 0
+  const payableTotal = appliedCoupon ? appliedCoupon.total : totalPrice + shippingFee
 
   if (items.length === 0) {
     return (
@@ -127,20 +202,53 @@ export default function CartPage() {
               <div className="sticky top-20 bg-card border border-border rounded-lg p-6">
                 <h2 className="text-lg font-bold text-foreground mb-4">Order Summary</h2>
 
+                <div className="mb-5">
+                  <label className="text-sm font-semibold text-foreground mb-2 block">Coupon</label>
+                  <div className="flex gap-2">
+                    <input
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                      placeholder="Enter code"
+                      className="flex-1 border border-border rounded-md px-3 py-2 text-sm uppercase"
+                      disabled={Boolean(appliedCoupon)}
+                    />
+                    {appliedCoupon ? (
+                      <button type="button" onClick={handleRemoveCoupon} className="text-sm font-semibold text-destructive">
+                        Remove
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleApplyCoupon}
+                        disabled={couponLoading}
+                        className="px-3 py-2 rounded-md bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-60"
+                      >
+                        {couponLoading ? '...' : 'Apply'}
+                      </button>
+                    )}
+                  </div>
+                  {couponError && <p className="text-xs text-destructive mt-2">{couponError}</p>}
+                  {appliedCoupon && <p className="text-xs text-primary mt-2">{appliedCoupon.message || `${appliedCoupon.code} applied`}</p>}
+                </div>
+
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Subtotal</span>
                     <span className="text-foreground">₹{totalPrice.toLocaleString()}</span>
                   </div>
+                  {discount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Coupon ({appliedCoupon?.code})</span>
+                      <span className="text-primary font-semibold">-₹{discount.toLocaleString()}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Shipping</span>
-                    <span className="text-foreground">Free</span>
+                    <span className="text-foreground">{shippingFee > 0 ? `₹${shippingFee}` : 'Free'}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Tax</span>
-                    <span className="text-foreground">
-                      ₹{Math.round(totalPrice * 0.18).toLocaleString()}
-                    </span>
+                    <span className="text-foreground text-xs font-medium">Included in price</span>
                   </div>
                 </div>
 
@@ -148,7 +256,7 @@ export default function CartPage() {
                   <div className="flex justify-between font-bold">
                     <span className="text-foreground">Total</span>
                     <span className="text-primary text-lg">
-                      ₹{Math.round(totalPrice * 1.18).toLocaleString()}
+                      ₹{payableTotal.toLocaleString()}
                     </span>
                   </div>
                 </div>

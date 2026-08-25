@@ -9,3 +9,4 @@ export const USERS = "/users";
 export const CONTACTS = "/contacts";
 export const AUTH = "/auth";
 export const WISHLIST = "/wishlist";
+export const COUPONS = "/coupons";

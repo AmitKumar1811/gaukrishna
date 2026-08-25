@@ -1,5 +1,5 @@
 import { apiClient } from './AxiosInstance';
-import { CART, CATEGORIES, ADDRESSES, ORDERS, PAYMENTS, PRODUCTS, USER, CONTACTS } from './endpoints';
+import { CART, CATEGORIES, ADDRESSES, ORDERS, PAYMENTS, PRODUCTS, USER, CONTACTS, COUPONS } from './endpoints';
 
 export const getCart = async () => {
     try {
@@ -101,7 +101,12 @@ export const removeAddress = async (addressId: string) => {
     }
 };
 
-export const placeOrderFromCart = async (data: { items: any[], address: any }) => {
+export const validateCoupon = async (data: { code: string; subtotal: number }) => {
+    const response = await apiClient.post(`${COUPONS}/validate`, data);
+    return response.data;
+};
+
+export const placeOrderFromCart = async (data: { items: any[], address: any, couponCode?: string }) => {
     try {
         const response = await apiClient.post(ORDERS, data);
         return response.data;
@@ -111,7 +116,7 @@ export const placeOrderFromCart = async (data: { items: any[], address: any }) =
     }
 };
 
-export const buyNow = async (data: { productId: string; quantity: number; address: any }) => {
+export const buyNow = async (data: { productId: string; quantity: number; address: any; couponCode?: string }) => {
     try {
         const response = await apiClient.post(`${ORDERS}/buy-now`, data);
         return response.data;
@@ -223,6 +228,16 @@ export const checkStock = async (items: any[]) => {
         return response.data;
     } catch (error) {
         console.error("❌ Error checking stock:", error);
+        throw error;
+    }
+};
+
+export const getOrderById = async (id: string) => {
+    try {
+        const response = await apiClient.get(`${ORDERS}/${id}`);
+        return response.data;
+    } catch (error) {
+        console.error("❌ Error fetching order by ID:", error);
         throw error;
     }
 };

@@ -32,14 +32,18 @@ export default function OrderPage() {
             try {
                 const data = await getOrders()
                 // Map backend data to UI structure if necessary
-                const mappedOrders = data.map((order: any) => ({
-                    orderId: order.orderId || `#ORD-${order._id?.slice(-6) || '0000'}`,
-                    _id: order._id,
-                    date: order.date || new Date(order.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-                    status: order.status || 'Processing',
-                    total: order.total || `₹${order.totalAmount || 0}`,
-                    items: order.items || []
-                }))
+                const mappedOrders = data.map((order: any) => {
+                    const statusStr = order.orderStatus || order.status || 'processing';
+                    const displayStatus = statusStr.charAt(0).toUpperCase() + statusStr.slice(1).toLowerCase();
+                    return {
+                        orderId: order.orderId || `#ORD-${order._id?.slice(-6) || '0000'}`,
+                        _id: order._id,
+                        date: order.date || new Date(order.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+                        status: displayStatus,
+                        total: order.total || `₹${order.totalAmount || 0}`,
+                        items: order.items || []
+                    };
+                })
                 setOrders(mappedOrders)
             } catch (error) {
                 console.error('Failed to fetch orders:', error)
@@ -107,17 +111,24 @@ export default function OrderPage() {
                             </div>
 
                             <div className="flex gap-3 justify-end pt-2">
-                                <button className="px-4 py-2 text-sm font-medium text-[#1a5f48] border border-[#1a5f48] rounded hover:bg-[#1a5f48] hover:text-white transition-colors">
-                                    View Details
-                                </button>
-                                {order.status !== 'Delivered' ? (
-                                    <button className="px-4 py-2 text-sm font-medium text-white bg-[#1a5f48] rounded hover:bg-[#154d3b] transition-colors">
-                                        Track Order
+                                <Link href={`/profile/orders/${order._id}`}>
+                                    <button className="px-4 py-2 text-sm font-medium text-[#1a5f48] border border-[#1a5f48] rounded hover:bg-[#1a5f48] hover:text-white transition-colors">
+                                        View Details
                                     </button>
-                                ) : (
-                                    <button className="px-4 py-2 text-sm font-medium text-white bg-[#1a5f48] rounded hover:bg-[#154d3b] transition-colors">
-                                        Buy Again
-                                    </button>
+                                </Link>
+                                {['shipped', 'transit', 'in transit'].includes(order.status.toLowerCase()) && (
+                                    <Link href={`/track-order?orderId=${order.orderId}`}>
+                                        <button className="px-4 py-2 text-sm font-medium text-white bg-[#1a5f48] rounded hover:bg-[#154d3b] transition-colors">
+                                            Track Order
+                                        </button>
+                                    </Link>
+                                )}
+                                {order.status.toLowerCase() === 'delivered' && (
+                                    <Link href="/products">
+                                        <button className="px-4 py-2 text-sm font-medium text-white bg-[#1a5f48] rounded hover:bg-[#154d3b] transition-colors">
+                                            Buy Again
+                                        </button>
+                                    </Link>
                                 )}
                             </div>
                         </div>

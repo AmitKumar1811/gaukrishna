@@ -39,7 +39,15 @@ export function QualityModern() {
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <ScrollReveal direction="up" className="text-center mb-12 md:mb-16">
-          <span className="text-[#1a5f48] font-semibold tracking-widest uppercase text-xs md:text-sm mb-3 block">
+          <div className="flex flex-col items-center justify-center gap-1 mb-4 opacity-90">
+            <span className="text-[#1a5f48] font-serif text-xl sm:text-2xl tracking-widest">
+              शुद्धम् सात्विकम् च
+            </span>
+            <span className="text-[#1a5f48]/70 text-[10px] uppercase tracking-[0.2em] font-semibold">
+              Pure and Sattvic
+            </span>
+          </div>
+          <span className="text-[#1a5f48] font-semibold tracking-widest uppercase text-xs md:text-sm mb-3 block mt-2">
             Quality Promise
           </span>
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">

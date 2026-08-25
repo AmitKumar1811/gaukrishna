@@ -13,8 +13,20 @@ import {
   type SearchParamsRecord,
 } from './products-page-helpers'
 
+import type { Metadata } from 'next'
+
 interface ProductsPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}
+
+export async function generateMetadata({ searchParams }: ProductsPageProps): Promise<Metadata> {
+  const resolvedSearchParams = (await searchParams) as SearchParamsRecord
+  const query = parseProductsPageQuery(resolvedSearchParams)
+  
+  return {
+    title: getProductsPageTitle(query) + ' - Gau Krishna',
+    description: getProductsPageDescription(query),
+  }
 }
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {

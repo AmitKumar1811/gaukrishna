@@ -74,7 +74,15 @@ export function TestimonialsModern() {
             transition={{ duration: 0.6 }}
             className="max-w-xl"
           >
-            <span className="text-[#1a5f48] font-semibold tracking-widest uppercase text-xs md:text-sm mb-3 block">
+            <div className="flex flex-col gap-1 mb-4 opacity-90">
+              <span className="text-[#1a5f48] font-serif text-xl sm:text-2xl tracking-widest">
+                विश्वास जो परंपरा से आता है
+              </span>
+              <span className="text-[#1a5f48]/70 text-[10px] uppercase tracking-[0.2em] font-semibold">
+                Trust that comes from tradition
+              </span>
+            </div>
+            <span className="text-[#1a5f48] font-semibold tracking-widest uppercase text-xs md:text-sm mb-3 block mt-2">
               Testimonials
             </span>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">

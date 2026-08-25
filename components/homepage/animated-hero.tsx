@@ -7,7 +7,7 @@ import { ArrowRight, ChevronDown } from 'lucide-react'
 
 export function AnimatedHero() {
   return (
-    <section className="relative min-h-[85vh] md:min-h-[90vh] flex items-center justify-center overflow-hidden bg-white">
+    <section className="relative min-h-[60vh] md:min-h-[70vh] flex items-center justify-center overflow-hidden bg-white py-20">
       {/* Hero Background Photo */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
         <Image
@@ -29,9 +29,17 @@ export function AnimatedHero() {
           initial={{ opacity: 0, y: 20, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.6, ease: [0.25, 0.4, 0.25, 1] }}
-          className="mb-6 md:mb-8"
+          className="mb-6 md:mb-8 flex flex-col items-center justify-center gap-4"
         >
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#1a5f48]/8 border border-[#1a5f48]/15 text-[#1a5f48] text-sm font-medium backdrop-blur-sm">
+          <div className="flex flex-col items-center justify-center gap-1 opacity-90">
+            <span className="text-[#1a5f48] font-serif text-xl sm:text-2xl tracking-widest">
+              गावो विश्वस्य मातरः
+            </span>
+            <span className="text-[#1a5f48]/70 text-[10px] uppercase tracking-[0.2em] font-semibold">
+              Cows are the mothers of the universe
+            </span>
+          </div>
+          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#1a5f48]/8 border border-[#1a5f48]/15 text-[#1a5f48] text-sm font-medium backdrop-blur-sm mt-2">
             <span className="w-2 h-2 rounded-full bg-[#1a5f48] animate-pulse" />
             Pure Desi Ghee &amp; Cold-Pressed Oils
           </span>
