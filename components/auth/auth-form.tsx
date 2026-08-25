@@ -16,6 +16,7 @@ import {
     EyeOff,
     ArrowLeft
 } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -213,7 +214,13 @@ export function AuthForm() {
 
     if (isForgotPassword) {
         return (
-            <div className="flex flex-col h-full justify-center w-full max-w-md mx-auto">
+            <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="flex flex-col h-full justify-center w-full max-w-md mx-auto"
+            >
                 <div className="mb-8">
                     <Button
                         variant="ghost"
@@ -222,9 +229,14 @@ export function AuthForm() {
                     >
                         <ArrowLeft className="mr-2 h-4 w-4" /> Back to Login
                     </Button>
-                    <h1 className="text-3xl font-bold text-[#1A4D2E] font-serif">
-                        Reset Password
-                    </h1>
+                    <motion.h1 
+                        initial={{ opacity: 0, filter: "blur(8px)", y: 15 }}
+                        animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
+                        transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
+                        className="text-4xl font-bold text-[#1A4D2E] font-serif"
+                    >
+                        स्मृति-पुनर्प्राप्तिः
+                    </motion.h1>
                     <p className="text-muted-foreground mt-2 text-sm">
                         Enter your email to receive a password reset link
                     </p>
@@ -241,7 +253,7 @@ export function AuthForm() {
                                     <FormControl>
                                         <Input
                                             placeholder="Johndoe@gmail.com"
-                                            className="h-11 rounded-md border-gray-200 focus:border-[#1A4D2E] focus:ring-[#1A4D2E] bg-white"
+                                            className="h-11 rounded-md border-gray-200 focus:border-[#1A4D2E] focus:ring-[#1A4D2E] bg-white transition-colors"
                                             {...field}
                                         />
                                     </FormControl>
@@ -249,33 +261,47 @@ export function AuthForm() {
                                 </FormItem>
                             )}
                         />
-                        <Button type="submit" size="lg" className="w-full h-11 rounded-md text-base bg-[#1A4D2E] hover:bg-[#143D24] text-white font-medium shadow-sm" disabled={isLoading}>
+                        <Button type="submit" size="lg" className="w-full h-11 rounded-md text-base bg-[#1A4D2E] hover:bg-[#143D24] text-white font-medium shadow-sm transition-transform active:scale-[0.98]" disabled={isLoading}>
                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Send Reset Link
                         </Button>
                     </form>
                 </Form>
-            </div>
+            </motion.div>
         )
     }
 
     return (
-        <div className="flex flex-col h-full justify-center w-full max-w-md mx-auto">
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-[#1A4D2E] font-serif">
-                    {activeTab === "login" ? "Welcome" : "Create Account"}
-                </h1>
-                <p className="text-muted-foreground mt-2 text-sm">
-                    {activeTab === "login"
-                        ? "Get started for a seamless shopping experience"
-                        : "Join us for a seamless shopping experience"}
-                </p>
-            </div>
+        <AnimatePresence mode="wait">
+            <motion.div 
+                key={activeTab}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="flex flex-col h-full justify-center w-full max-w-md mx-auto"
+            >
+                <div className="mb-8 text-center sm:text-left">
+                    <motion.h1 
+                        key={activeTab}
+                        initial={{ opacity: 0, filter: "blur(8px)", y: 15 }}
+                        animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
+                        transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
+                        className="text-4xl font-bold text-[#1A4D2E] font-serif"
+                    >
+                        {activeTab === "login" ? "सुस्वागतम्" : "नव आरम्भः"}
+                    </motion.h1>
+                    <p className="text-muted-foreground mt-3 text-sm">
+                        {activeTab === "login"
+                            ? "Get started for a seamless shopping experience"
+                            : "Join us for a seamless shopping experience"}
+                    </p>
+                </div>
 
             <div className="mb-6">
                 <Button
                     variant="outline"
-                    className="w-full h-10 sm:h-11 border-gray-200 hover:bg-gray-50 hover:border-gray-300 bg-white transition-all shadow-sm rounded-lg text-sm sm:text-base font-medium"
+                    className="w-full h-10 sm:h-11 border-gray-200 hover:bg-gray-50 hover:border-gray-300 bg-white transition-transform active:scale-[0.98] shadow-sm rounded-lg text-sm sm:text-base font-medium"
                     type="button"
                     onClick={handleGoogleLogin}
                     disabled={isLoading}
@@ -333,7 +359,7 @@ export function AuthForm() {
                                                 <Input
                                                     type={showPassword ? "text" : "password"}
                                                     placeholder="At least 8 characters"
-                                                    className="pr-12 h-11 rounded-md border-gray-200 focus:border-[#1A4D2E] focus:ring-[#1A4D2E] bg-white"
+                                                    className="pr-12 h-11 rounded-md border-gray-200 focus:border-[#1A4D2E] focus:ring-[#1A4D2E] bg-white transition-colors"
                                                     {...field}
                                                 />
                                                 <button
@@ -364,7 +390,7 @@ export function AuthForm() {
                                 </button>
                             </div>
 
-                            <Button type="submit" size="lg" className="w-full h-11 rounded-md text-base bg-[#1A4D2E] hover:bg-[#143D24] text-white font-medium shadow-sm" disabled={isLoading}>
+                            <Button type="submit" size="lg" className="w-full h-11 rounded-md text-base bg-[#1A4D2E] hover:bg-[#143D24] text-white font-medium shadow-sm transition-transform active:scale-[0.98]" disabled={isLoading}>
                                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 Login
                             </Button>
@@ -466,7 +492,7 @@ export function AuthForm() {
                                 )}
                             />
 
-                            <Button type="submit" size="lg" className="w-full h-11 rounded-md text-base bg-[#1A4D2E] hover:bg-[#143D24] text-white font-medium shadow-sm" disabled={isLoading}>
+                            <Button type="submit" size="lg" className="w-full h-11 rounded-md text-base bg-[#1A4D2E] hover:bg-[#143D24] text-white font-medium shadow-sm transition-transform active:scale-[0.98]" disabled={isLoading}>
                                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 Register
                             </Button>
@@ -481,7 +507,7 @@ export function AuthForm() {
                         Don&apos;t have an account?{" "}
                         <button
                             onClick={() => setActiveTab("register")}
-                            className="text-[#1A4D2E] font-bold hover:underline underline-offset-4"
+                            className="text-[#1A4D2E] font-bold hover:underline underline-offset-4 transition-colors"
                         >
                             Register
                         </button>
@@ -491,13 +517,14 @@ export function AuthForm() {
                         Already have an account?{" "}
                         <button
                             onClick={() => setActiveTab("login")}
-                            className="text-[#1A4D2E] font-bold hover:underline underline-offset-4"
+                            className="text-[#1A4D2E] font-bold hover:underline underline-offset-4 transition-colors"
                         >
                             Log in
                         </button>
                     </>
                 )}
             </div>
-        </div>
+            </motion.div>
+        </AnimatePresence>
     )
 }

@@ -13,6 +13,10 @@ export const metadata: Metadata = {
   title: 'Gau Krishna - Pure A2 Ghee & Cold-Pressed Oils',
   description: 'Premium A2 ghee and cold-pressed oils sourced directly from Indian farms. 40+ quality checks, traditional processing, 100% pure.',
   generator: 'v0.app',
+  icons: {
+    icon: '/favicon.jpg',
+    apple: '/favicon.jpg',
+  },
 }
 
 export default function RootLayout({
