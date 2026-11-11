@@ -5,8 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Footer } from '@/components/footer'
 import { useCart } from '@/lib/cart-context'
 import { Button } from '@/components/ui/button'
-import { Check } from 'lucide-react'
+import { AlertTriangle, Check } from 'lucide-react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { 
   getAllAddresses, 
   createAddress, 
@@ -22,18 +23,66 @@ import {
 } from '@/app/api/api-service'
 import { clearStoredCoupon, getStoredCoupon, storeCoupon, type AppliedCoupon } from '@/lib/coupon-storage'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
+function normalizeAddressesList(res: any): any[] {
+  if (Array.isArray(res)) return res
+  if (Array.isArray(res?.data?.data)) return res.data.data
+  if (Array.isArray(res?.data)) return res.data
+  return []
+}
+
+function hasValidAuthToken(): boolean {
+  if (typeof window === 'undefined') return false
+  const token = localStorage.getItem('token')
+  return Boolean(token && token !== 'null' && token !== 'undefined' && token.trim() !== '')
+}
+
+function formatSizeFromWeight(weight: unknown): string {
+  if (!weight) return 'Standard'
+  const trimmed = String(weight).trim()
+  if (!trimmed) return 'Standard'
+  return /[a-zA-Z]$/.test(trimmed) ? trimmed : `${trimmed}g`
+}
+
+function formatStockFailureMessage(res: any): string {
+  const rows = Array.isArray(res?.data) ? res.data : []
+  const unavailable = rows.filter(
+    (d: any) =>
+      d &&
+      (d.inStock === false ||
+        d.isActive === false ||
+        (typeof d.availableStock === 'number' &&
+          typeof d.requestedQuantity === 'number' &&
+          d.availableStock < d.requestedQuantity))
+  )
+  const details = unavailable
+    .map((d: any) =>
+      d.isActive === false
+        ? `${d.name || 'Item'} (unavailable)`
+        : `${d.name || 'Item'} (available: ${d.availableStock ?? 0})`
+    )
+    .join(', ')
+
+  return (
+    res?.message ||
+    (details
+      ? `Out of stock / insufficient stock: ${details}`
+      : 'Some items are out of stock or the requested quantity is not available.')
+  )
+}
+
 function CheckoutForm() {
   const router = useRouter()
-  const { items, totalPrice, clearCart, syncCart } = useCart()
+  const { items, isLoaded: isCartLoaded, totalPrice, clearCart, syncCart } = useCart()
+  const [authChecked, setAuthChecked] = useState(false)
   const [addresses, setAddresses] = useState<any[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(true)
   const [isSavingAddress, setIsSavingAddress] = useState(false)
+  const [addressError, setAddressError] = useState('')
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null)
   const [showAddressForm, setShowAddressForm] = useState(false)
   const [formData, setFormData] = useState({
@@ -45,12 +94,14 @@ function CheckoutForm() {
     addressLine2: '',
     city: '',
     state: '',
-    country: '',
+    country: 'India',
     pincode: '',
   })
   const [orderPlaced, setOrderPlaced] = useState(false)
   const [placingOrder, setPlacingOrder] = useState(false)
   const [paymentLoading, setPaymentLoading] = useState(false)
+  const [checkoutError, setCheckoutError] = useState('')
+  const [stockIssueError, setStockIssueError] = useState('')
   const [couponCode, setCouponCode] = useState('')
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null)
   const [couponError, setCouponError] = useState('')
@@ -59,6 +110,7 @@ function CheckoutForm() {
   const searchParams = useSearchParams()
   const isBuyNow = searchParams?.get('type') === 'buynow'
   const buyNowProductId = searchParams?.get('productId')
+  const buyNowVariantId = searchParams?.get('variantId') || 'default'
   const parsedQuantity = searchParams?.get('quantity') ? parseInt(searchParams?.get('quantity') as string, 10) : 1
   const buyNowQuantity = Number.isFinite(parsedQuantity) && parsedQuantity > 0 ? parsedQuantity : 1
   const [buyNowProduct, setBuyNowProduct] = useState<any>(null)
@@ -66,18 +118,56 @@ function CheckoutForm() {
   const [buyNowError, setBuyNowError] = useState('')
 
   useEffect(() => {
-    if (isBuyNow && buyNowProductId) {
+    if (!hasValidAuthToken()) {
+      const currentQuery = searchParams?.toString()
+      const target = currentQuery ? `/checkout?${currentQuery}` : '/checkout'
+      router.replace(`/login?redirect=${encodeURIComponent(target)}`)
+      return
+    }
+    setAuthChecked(true)
+  }, [router, searchParams])
+
+  useEffect(() => {
+    if (!authChecked) return
+    if (isBuyNow) {
+      if (!buyNowProductId) {
+        setBuyNowProduct(null)
+        setBuyNowError('No product specified for Buy Now checkout')
+        setIsLoadingBuyNow(false)
+        return
+      }
+
       setIsLoadingBuyNow(true)
       setBuyNowError('')
+      setStockIssueError('')
       getProductById(buyNowProductId)
-        .then((res) => {
-          const productData = res.data?.data || res.data
+        .then(async (res) => {
+          const productData = res?.data?.data || res?.data
           if (!productData || !productData.name) {
             setBuyNowProduct(null)
             setBuyNowError('Product not found')
             return
           }
           setBuyNowProduct(productData)
+
+          const resolvedPid = productData._id || productData.id || buyNowProductId
+          try {
+            const stockRes = await checkStock([{ productId: resolvedPid, quantity: buyNowQuantity }])
+            const hasRowFailure = Array.isArray(stockRes?.data) && stockRes.data.some(
+              (d: any) =>
+                d &&
+                (d.inStock === false ||
+                  d.isActive === false ||
+                  (typeof d.availableStock === 'number' &&
+                    typeof d.requestedQuantity === 'number' &&
+                    d.availableStock < d.requestedQuantity))
+            )
+            if ((stockRes && (stockRes.allInStock === false || stockRes.success === false)) || hasRowFailure) {
+              setStockIssueError(formatStockFailureMessage(stockRes))
+            }
+          } catch (stockErr) {
+            console.error('Failed to pre-check Buy Now stock:', stockErr)
+          }
         })
         .catch((err) => {
           console.error(err)
@@ -88,38 +178,43 @@ function CheckoutForm() {
           setIsLoadingBuyNow(false)
         })
     }
-  }, [isBuyNow, buyNowProductId])
+  }, [authChecked, isBuyNow, buyNowProductId, buyNowQuantity])
 
-  const buyNowSize = buyNowProduct?.weight
-    ? (/[a-zA-Z]$/.test(String(buyNowProduct.weight)) ? String(buyNowProduct.weight) : `${buyNowProduct.weight}g`)
-    : 'Standard'
+  const matchedBuyNowVariant =
+    Array.isArray(buyNowProduct?.variants) && buyNowProduct.variants.length > 0
+      ? (buyNowProduct.variants.find((v: any) => (v.id || v._id) === buyNowVariantId) || buyNowProduct.variants[0])
+      : null
 
-  const displayItems = isBuyNow && buyNowProduct ? [{
-    productId: buyNowProduct._id || buyNowProduct.id || (buyNowProductId as string),
-    variantId: 'default',
-    productName: buyNowProduct.name || buyNowProduct.title || 'Product',
-    size: buyNowSize,
-    price: buyNowProduct.price || 0,
-    quantity: buyNowQuantity
-  }] : items;
+  const buyNowResolvedProductId = buyNowProduct?._id || buyNowProduct?.id || (buyNowProductId as string)
+  const buyNowResolvedVariantId = matchedBuyNowVariant ? (matchedBuyNowVariant.id || matchedBuyNowVariant._id || 'default') : 'default'
+  const buyNowUnitPrice = matchedBuyNowVariant?.price ?? buyNowProduct?.price ?? 0
+  const buyNowSize = matchedBuyNowVariant
+    ? (matchedBuyNowVariant.size || formatSizeFromWeight(matchedBuyNowVariant.weight) || 'Standard')
+    : formatSizeFromWeight(buyNowProduct?.weight)
 
-  const displayTotalPrice = isBuyNow && buyNowProduct ? ((buyNowProduct.price || 0) * buyNowQuantity) : totalPrice;
+  const displayItems = isBuyNow
+    ? (buyNowProduct ? [{
+        productId: buyNowResolvedProductId,
+        variantId: buyNowResolvedVariantId,
+        productName: buyNowProduct.name || buyNowProduct.title || 'Product',
+        size: buyNowSize,
+        price: buyNowUnitPrice,
+        quantity: buyNowQuantity
+      }] : [])
+    : items
+
+  const displayTotalPrice = isBuyNow
+    ? (buyNowProduct ? buyNowUnitPrice * buyNowQuantity : 0)
+    : totalPrice
 
   useEffect(() => {
-    const initCheckout = async () => {
-      if (isBuyNow) return; // Do not sync cart for buy now
-      try {
-        await syncCart()
-      } catch (error) {
-        console.error('Failed to sync API cart before checkout:', error)
-      }
-    }
-    
+    if (!authChecked) return
+
     const loadAddresses = async () => {
       setIsLoadingAddresses(true)
       try {
         const res = await getAllAddresses()
-        const list = Array.isArray(res) ? res : (res.data?.data || res.data || [])
+        const list = normalizeAddressesList(res)
         setAddresses(list)
         if (list.length > 0) {
           const defaultAddr = list.find((a: any) => a.isDefault)
@@ -132,19 +227,41 @@ function CheckoutForm() {
       }
     }
 
-    initCheckout()
     loadAddresses()
-    const stored = getStoredCoupon()
-    if (stored) {
-      setAppliedCoupon(stored)
-      setCouponCode(stored.code)
+    if (!isBuyNow) {
+      const stored = getStoredCoupon()
+      if (stored) {
+        setAppliedCoupon(stored)
+        setCouponCode(stored.code)
+      }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [authChecked, isBuyNow])
 
   useEffect(() => {
+    if (!authChecked || isBuyNow || !isCartLoaded) return
+    if (items.length === 0) {
+      setStockIssueError('')
+      return
+    }
+    let cancelled = false
+    syncCart({ silent: true }).then((res) => {
+      if (cancelled) return
+      if (!res.ok) {
+        setStockIssueError(res.message || 'Some items in your cart are out of stock.')
+      } else {
+        setStockIssueError('')
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [authChecked, isBuyNow, isCartLoaded, items, syncCart])
+
+  useEffect(() => {
+    if (!authChecked || !hasValidAuthToken()) return
     const stored = getStoredCoupon()
-    if (!stored || !displayTotalPrice) return
+    if (!stored || !displayTotalPrice || displayTotalPrice <= 0) return
+    setCouponCode(stored.code)
     validateCoupon({ code: stored.code, subtotal: displayTotalPrice })
       .then((result) => {
         const applied: AppliedCoupon = {
@@ -156,13 +273,36 @@ function CheckoutForm() {
         }
         setAppliedCoupon(applied)
         storeCoupon(applied)
+        setCouponError('')
       })
       .catch((error: any) => {
         setAppliedCoupon(null)
         clearStoredCoupon()
         setCouponError(error.response?.data?.message || 'Coupon is no longer valid')
       })
-  }, [displayTotalPrice])
+  }, [authChecked, displayTotalPrice])
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <main className="flex-1 flex items-center justify-center">
+          <p className="text-muted-foreground">Redirecting to login...</p>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
+
+  if (!isBuyNow && !isCartLoaded) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <main className="flex-1 flex items-center justify-center">
+          <p className="text-muted-foreground">Loading checkout...</p>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
 
   if (displayItems.length === 0 && !orderPlaced && !isBuyNow) {
     return (
@@ -184,6 +324,7 @@ function CheckoutForm() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+    if (addressError) setAddressError('')
   }
 
   const resetForm = () => {
@@ -196,44 +337,75 @@ function CheckoutForm() {
       addressLine2: '',
       city: '',
       state: '',
-      country: '',
+      country: 'India',
       pincode: '',
     })
     setEditingAddressId(null)
+    setAddressError('')
     setShowAddressForm(false)
   }
 
   const handleSaveAddress = async (e: React.FormEvent) => {
     e.preventDefault()
+    setAddressError('')
+
+    const phoneDigits = formData.phone.replace(/\D/g, '')
+    const pincodeDigits = formData.pincode.replace(/\D/g, '')
+    if (!formData.name.trim()) {
+      setAddressError('Please enter a full name')
+      return
+    }
+    if (phoneDigits.length < 10) {
+      setAddressError('Please enter a valid phone number (at least 10 digits)')
+      return
+    }
+    if (!formData.addressLine1.trim()) {
+      setAddressError('Please enter Address Line 1')
+      return
+    }
+    if (!formData.city.trim() || !formData.state.trim()) {
+      setAddressError('Please enter both City and State')
+      return
+    }
+    if (pincodeDigits.length !== 6) {
+      setAddressError('Please enter a valid 6-digit pincode')
+      return
+    }
+
     setIsSavingAddress(true)
     const payload = {
-      name: formData.name,
-      type: formData.type,
-      email: formData.email,
-      phone: formData.phone,
-      addressLine1: formData.addressLine1,
-      addressLine2: formData.addressLine2,
-      city: formData.city,
-      state: formData.state,
-      country: formData.country,
-      pincode: formData.pincode,
+      name: formData.name.trim(),
+      type: formData.type || 'Home',
+      email: formData.email.trim(),
+      phone: formData.phone.trim(),
+      addressLine1: formData.addressLine1.trim(),
+      addressLine2: formData.addressLine2.trim(),
+      city: formData.city.trim(),
+      state: formData.state.trim(),
+      country: formData.country.trim() || 'India',
+      pincode: pincodeDigits,
     }
     try {
+      const previousIds = new Set(addresses.map((a) => a._id || a.id))
       if (editingAddressId) {
         await editAddress(editingAddressId, payload)
       } else {
         await createAddress(payload)
       }
       const res = await getAllAddresses()
-      const list = res.data?.data || res.data || []
-      setAddresses(Array.isArray(list) ? list : [])
-      const newId =
-        editingAddressId ||
-        (Array.isArray(list) && list.length > 0 ? (list[list.length - 1]._id || list[list.length - 1].id) : null)
+      const list = normalizeAddressesList(res)
+      setAddresses(list)
+      const createdAddr = list.find((a) => !previousIds.has(a._id || a.id))
+      const fallbackLast = list.length > 0 ? (list[list.length - 1]._id || list[list.length - 1].id) : null
+      const newId = editingAddressId || createdAddr?._id || createdAddr?.id || fallbackLast
       if (newId) setSelectedAddressId(newId)
+      toast.success(editingAddressId ? 'Address updated successfully' : 'Address added successfully')
       resetForm()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save address', error)
+      const msg = error?.response?.data?.message || 'Failed to save address. Please check details and try again.'
+      setAddressError(msg)
+      toast.error(msg)
     } finally {
       setIsSavingAddress(false)
     }
@@ -241,6 +413,7 @@ function CheckoutForm() {
 
   const handleEditAddress = (address: any) => {
     setEditingAddressId(address._id || address.id)
+    setAddressError('')
     setFormData({
       name: address.name || `${address.firstName || ''} ${address.lastName || ''}`.trim(),
       type: address.type || 'Home',
@@ -250,7 +423,7 @@ function CheckoutForm() {
       addressLine2: address.addressLine2 || '',
       city: address.city || '',
       state: address.state || '',
-      country: address.country || '',
+      country: address.country || 'India',
       pincode: address.pincode || '',
     })
     setShowAddressForm(true)
@@ -265,15 +438,38 @@ function CheckoutForm() {
         setSelectedAddressId(updated[0] ? updated[0]._id || updated[0].id : null)
       }
       if (editingAddressId === addressId) resetForm()
-    } catch (error) {
+      toast.success('Address removed')
+    } catch (error: any) {
       console.error('Failed to delete address', error)
+      toast.error(error?.response?.data?.message || 'Failed to delete address')
     }
   }
 
+  const deliveryFee = appliedCoupon
+    ? appliedCoupon.shippingFee
+    : (displayTotalPrice > 0 && displayTotalPrice < 500 ? 50 : 0)
+  const discount = appliedCoupon?.discount || 0
+  const finalTotal = appliedCoupon ? appliedCoupon.total : displayTotalPrice + deliveryFee
+
   const handlePlaceOrder = async () => {
-    if (!selectedAddressId) return
+    setCheckoutError('')
+    if (!selectedAddressId) {
+      setCheckoutError('Please select a delivery address')
+      return
+    }
     const selectedAddress = addresses.find((a) => (a._id || a.id) === selectedAddressId)
-    if (!selectedAddress) return
+    if (!selectedAddress) {
+      setCheckoutError('Selected address not found. Please pick or add an address.')
+      return
+    }
+    if (isBuyNow && !buyNowProduct) {
+      setCheckoutError(buyNowError || 'Product details are unavailable.')
+      return
+    }
+    if (!isBuyNow && items.length === 0) {
+      setCheckoutError('Your cart is empty.')
+      return
+    }
 
     const normalizedAddress = {
       type: selectedAddress.type || 'Home',
@@ -286,48 +482,63 @@ function CheckoutForm() {
       addressLine2: selectedAddress.addressLine2 || selectedAddress.landmark || selectedAddress.area || '',
       city: selectedAddress.city || '',
       state: selectedAddress.state || '',
+      country: selectedAddress.country || 'India',
       pincode: selectedAddress.pincode || '',
+      ...(selectedAddress.email || formData.email ? { email: selectedAddress.email || formData.email } : {}),
     }
 
     setPlacingOrder(true)
     try {
-      let backendOrder;
-      
+      // Stock validation for BOTH Buy Now and Cart Checkout before order creation
+      const stockPayload = isBuyNow
+        ? [{ productId: buyNowResolvedProductId, quantity: buyNowQuantity }]
+        : items.map((item) => ({ productId: item.productId, quantity: item.quantity }))
+
+      const stockRes = await checkStock(stockPayload)
+      const stockRows = Array.isArray(stockRes?.data) ? stockRes.data : []
+      const hasUnavailable = stockRows.some(
+        (d: any) =>
+          d &&
+          (d.inStock === false ||
+            d.isActive === false ||
+            (typeof d.availableStock === 'number' &&
+              typeof d.requestedQuantity === 'number' &&
+              d.availableStock < d.requestedQuantity))
+      )
+      if ((stockRes && (stockRes.allInStock === false || stockRes.success === false)) || hasUnavailable) {
+        const msg = formatStockFailureMessage(stockRes)
+        setStockIssueError(msg)
+        setCheckoutError(msg)
+        toast.error(msg)
+        return
+      }
+
+      setPaymentLoading(true)
+
+      let backendOrder: any
       if (isBuyNow && buyNowProductId) {
         // Buy Now flow ignores local storage and sends payload directly
         backendOrder = await buyNow({
-          productId: buyNowProduct?._id || buyNowProduct?.id || buyNowProductId,
+          productId: buyNowResolvedProductId,
           quantity: buyNowQuantity,
           address: normalizedAddress,
-          couponCode: appliedCoupon?.code
-        });
+          ...(appliedCoupon?.code ? { couponCode: appliedCoupon.code } : {}),
+          ...(buyNowResolvedVariantId && buyNowResolvedVariantId !== 'default' ? { variantId: buyNowResolvedVariantId } : {}),
+        })
       } else {
-        // Soft check for out of stock
-        try {
-          const stockItems = items.map(item => ({ productId: item.productId, quantity: item.quantity }));
-          const res = await checkStock(stockItems);
-          if (res && res.success === false) {
-             alert(res.message || "Some items in your cart are out of stock or the requested quantity is not available. Please review your cart.");
-             setPlacingOrder(false);
-             return;
-          }
-        } catch (stockError: any) {
-          alert(stockError.response?.data?.message || stockError.message || "Some items in your cart are out of stock or the requested quantity is not available. Please review your cart.");
-          setPlacingOrder(false);
-          return;
-        }
-
-        setPaymentLoading(true)
-
         // Cart Checkout flow
-        backendOrder = await placeOrderFromCart({ 
-          items: items.map(i => ({ productId: i.productId, quantity: i.quantity })),
+        backendOrder = await placeOrderFromCart({
+          items: items.map((i) => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            ...(i.variantId && i.variantId !== 'default' ? { variantId: i.variantId } : {}),
+          })),
           address: normalizedAddress,
-          couponCode: appliedCoupon?.code
-        });
+          ...(appliedCoupon?.code ? { couponCode: appliedCoupon.code } : {}),
+        })
       }
 
-      const resData = backendOrder.data || backendOrder || {};
+      const resData = backendOrder?.data || backendOrder || {}
       const appOrderId =
         resData?._id ||
         resData?.id ||
@@ -335,19 +546,26 @@ function CheckoutForm() {
         resData?.order?._id ||
         resData?.order?.id ||
         backendOrder?.orderId ||
-        backendOrder?._id;
+        backendOrder?._id
 
       if (!appOrderId) {
-        console.error('Missing order ID in response:', backendOrder);
-        throw new Error('Could not find order ID from checkout response');
+        console.error('Missing order ID in response:', backendOrder)
+        throw new Error('Could not find order ID from checkout response')
       }
 
       const orderRes = await createPaymentOrder(appOrderId)
-      const rpOrderId = orderRes.data?.id || orderRes.data?.orderId || orderRes.id || orderRes.orderId
-      const rpAmount = orderRes.data?.amount || orderRes.amount
-      const rpCurrency = orderRes.data?.currency || orderRes.currency || 'INR'
+      const rpOrderId = orderRes?.data?.id || orderRes?.data?.orderId || orderRes?.id || orderRes?.orderId
+      const rpAmount = orderRes?.data?.amount || orderRes?.amount
+      const rpCurrency = orderRes?.data?.currency || orderRes?.currency || 'INR'
 
-      const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || ''
+      const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || orderRes?.data?.key || orderRes?.key || ''
+      if (!razorpayKey) {
+        throw new Error('Payment gateway key is not configured')
+      }
+      if (!rpOrderId || !rpAmount) {
+        throw new Error('Failed to initialize payment order')
+      }
+
       const loadRazorpay = () =>
         new Promise<void>((resolve, reject) => {
           if (typeof window === 'undefined') return reject(new Error('window undefined'))
@@ -355,32 +573,43 @@ function CheckoutForm() {
           const script = document.createElement('script')
           script.src = 'https://checkout.razorpay.com/v1/checkout.js'
           script.onload = () => resolve()
-          script.onerror = () => reject(new Error('Failed to load Razorpay'))
+          script.onerror = () => reject(new Error('Failed to load Razorpay checkout SDK'))
           document.body.appendChild(script)
         })
 
       await loadRazorpay()
 
+      let verifyResult: any = null
       await new Promise<void>((resolve, reject) => {
-        const rzp = new (window as any).Razorpay({
+        const RazorpayCtor = (window as any).Razorpay
+        if (typeof RazorpayCtor !== 'function') {
+          reject(new Error('Payment gateway failed to initialize'))
+          return
+        }
+        const rzp = new RazorpayCtor({
           key: razorpayKey,
           amount: rpAmount,
           currency: rpCurrency,
-          name: 'Checkout',
+          name: 'Gau Krishna',
           description: 'Order Payment',
           order_id: rpOrderId,
           handler: async (response: any) => {
             try {
-              await verifyPayment({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
+              verifyResult = await verifyPayment({
+                razorpay_order_id: response?.razorpay_order_id || rpOrderId,
+                razorpay_payment_id: response?.razorpay_payment_id,
+                razorpay_signature: response?.razorpay_signature,
               })
               resolve()
             } catch (err) {
               console.error('Payment verification failed', err)
               reject(err)
             }
+          },
+          modal: {
+            ondismiss: () => {
+              reject(new Error('Payment cancelled by user. Please try again.'))
+            },
           },
           prefill: {
             name: normalizedAddress.name,
@@ -393,13 +622,27 @@ function CheckoutForm() {
         rzp.open()
       })
 
-      const orderId = appOrderId || 'ORDER'
-      clearCart()
+      const orderId =
+        verifyResult?.order?.customOrderId ||
+        resData?.customOrderId ||
+        resData?.order?.customOrderId ||
+        appOrderId ||
+        'ORDER'
+      if (!isBuyNow) {
+        clearCart()
+      }
       clearStoredCoupon()
       setOrderPlaced(true)
-      router.push(`/order-success?orderId=${orderId}`)
-    } catch (error) {
+      router.push(`/order-success?orderId=${encodeURIComponent(orderId)}&total=${finalTotal}`)
+    } catch (error: any) {
       console.error('Failed to place order', error)
+      const msg =
+        error?.response?.data?.message ||
+        error?.description ||
+        error?.message ||
+        'Failed to place order. Please try again.'
+      setCheckoutError(msg)
+      toast.error(msg)
     } finally {
       setPlacingOrder(false)
       setPaymentLoading(false)
@@ -410,6 +653,14 @@ function CheckoutForm() {
     setCouponError('')
     if (!couponCode.trim()) {
       setCouponError('Enter a coupon code')
+      return
+    }
+    if (!displayTotalPrice || displayTotalPrice <= 0) {
+      setCouponError('Add items or wait for product details to load before applying a coupon')
+      return
+    }
+    if (!hasValidAuthToken()) {
+      setCouponError('Please login to apply a coupon')
       return
     }
     setCouponLoading(true)
@@ -439,10 +690,6 @@ function CheckoutForm() {
     setCouponError('')
     clearStoredCoupon()
   }
-
-  const deliveryFee = appliedCoupon ? appliedCoupon.shippingFee : (displayTotalPrice < 500 ? 50 : 0)
-  const discount = appliedCoupon?.discount || 0
-  const finalTotal = appliedCoupon ? appliedCoupon.total : displayTotalPrice + deliveryFee
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -597,11 +844,15 @@ function CheckoutForm() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Home">Home</SelectItem>
+                            <SelectItem value="Work">Work</SelectItem>
                             <SelectItem value="Office">Office</SelectItem>
                             <SelectItem value="Other">Other</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
+                      {addressError && (
+                        <p className="text-sm text-destructive">{addressError}</p>
+                      )}
                       <Input
                         type="email"
                         name="email"
@@ -706,13 +957,38 @@ function CheckoutForm() {
                   </div>
                 </div>
 
+                {(stockIssueError || checkoutError) && (
+                  <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+                    <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-semibold">Unable to proceed with order</p>
+                      <p>{checkoutError || stockIssueError}</p>
+                      {!isBuyNow && stockIssueError && (
+                        <Link href="/cart" className="mt-1 inline-block font-semibold underline text-red-900">
+                          Review your cart
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <Button
                   type="button"
                   onClick={handlePlaceOrder}
-                  disabled={!selectedAddressId || placingOrder || (isBuyNow && (!buyNowProduct || isLoadingBuyNow))}
+                  disabled={
+                    !selectedAddressId ||
+                    placingOrder ||
+                    paymentLoading ||
+                    Boolean(stockIssueError) ||
+                    (isBuyNow && (!buyNowProduct || isLoadingBuyNow || Boolean(buyNowError)))
+                  }
                   className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base"
                 >
-                  {placingOrder ? 'Placing order...' : 'Place Order'}
+                  {paymentLoading
+                    ? 'Opening payment...'
+                    : placingOrder
+                      ? 'Placing order...'
+                      : 'Place Order'}
                 </Button>
               </div>
             </div>
@@ -725,11 +1001,11 @@ function CheckoutForm() {
                 <div className="space-y-3 mb-6 pb-6 border-b border-border">
                   {displayItems.map((item) => (
                     <div key={`${item.productId}-${item.variantId}`} className="text-sm">
-                      <div className="flex justify-between mb-1">
+                      <div className="flex justify-between gap-2 mb-1">
                         <span className="text-muted-foreground">
-                          {item.size} × {item.quantity}
+                          {item.productName} ({item.size}) × {item.quantity}
                         </span>
-                        <span className="text-foreground font-medium">
+                        <span className="text-foreground font-medium shrink-0">
                           ₹{(item.price * item.quantity).toLocaleString()}
                         </span>
                       </div>

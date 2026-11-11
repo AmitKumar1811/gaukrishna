@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import PhoneInput from "react-phone-input-2"
 import "react-phone-input-2/lib/style.css"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { useDispatch } from "react-redux"
 import { setCredentials } from "@/lib/features/authSlice"
@@ -55,6 +55,9 @@ type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>
 
 export function AuthForm() {
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const rawRedirect = searchParams?.get("redirect") || "/"
+    const redirectTarget = rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") ? rawRedirect : "/"
     const dispatch = useDispatch()
     const [activeTab, setActiveTab] = useState<"login" | "register">("register")
     const [isForgotPassword, setIsForgotPassword] = useState(false)
@@ -95,11 +98,11 @@ export function AuthForm() {
             if (token) {
                 dispatch(setCredentials({ user: res.user, token: token }))
                 toast.success("Logged in successfully!")
-                router.push("/")
+                router.push(redirectTarget)
                 router.refresh()
             } else {
                 toast.success("Logged in!")
-                router.push("/")
+                router.push(redirectTarget)
             }
         } catch (error: any) {
             console.error("Login Error:", error)
@@ -163,7 +166,7 @@ export function AuthForm() {
             if (res?.accessToken) {
                 dispatch(setCredentials({ user: res.user, token: res.accessToken })) // Update Redux state
                 toast.success("Google login successful!")
-                router.push("/")
+                router.push(redirectTarget)
                 router.refresh()
             } else {
                 // If backend doesn't return a token but accepts the login
@@ -179,7 +182,7 @@ export function AuthForm() {
                 };
                 dispatch(setCredentials({ user: res?.user || fallbackUser, token: idToken }))
                 toast.success("Google login successful!")
-                router.push("/")
+                router.push(redirectTarget)
             }
         } catch (error: any) {
             console.error("Google Login Error:", error)

@@ -33,15 +33,24 @@ export default function OrderPage() {
                 const data = await getOrders()
                 // Map backend data to UI structure if necessary
                 const mappedOrders = data.map((order: any) => {
-                    const statusStr = order.orderStatus || order.status || 'processing';
+                    const statusStr = order.delhiveryShipmentStatus || order.orderStatus || order.status || 'processing';
                     const displayStatus = statusStr.charAt(0).toUpperCase() + statusStr.slice(1).toLowerCase();
+                    const mappedItems = Array.isArray(order.items) && order.items.length > 0
+                        ? order.items
+                        : (Array.isArray(order.products)
+                            ? order.products.map((p: any) => ({
+                                name: p.productId?.name || p.name || 'Product',
+                                quantity: p.quantity || 1,
+                                price: p.priceSnapshot,
+                            }))
+                            : []);
                     return {
-                        orderId: order.orderId || `#ORD-${order._id?.slice(-6) || '0000'}`,
+                        orderId: order.customOrderId ? `#${order.customOrderId}` : (order.orderId || `#ORD-${order._id?.slice(-6) || '0000'}`),
                         _id: order._id,
                         date: order.date || new Date(order.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
                         status: displayStatus,
                         total: order.total || `₹${order.totalAmount || 0}`,
-                        items: order.items || []
+                        items: mappedItems
                     };
                 })
                 setOrders(mappedOrders)
@@ -81,7 +90,7 @@ export default function OrderPage() {
             ) : (
                 <div className="space-y-6">
                     {orders.map((order) => (
-                        <div key={order.orderId} className="bg-white border border-gray-100 rounded-lg p-6 hover:shadow-sm transition-shadow">
+                        <div key={order._id || order.orderId} className="bg-white border border-gray-100 rounded-lg p-6 hover:shadow-sm transition-shadow">
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b border-gray-50 pb-4">
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-3">

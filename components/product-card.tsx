@@ -3,6 +3,7 @@
 import { Star, Minus, Plus } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { toast } from 'sonner'
 import { Product } from '@/lib/products'
 import { useCart } from '@/lib/cart-context'
 
@@ -20,12 +21,18 @@ export function ProductCard({ product }: ProductCardProps) {
   )
 
   const defaultVariant = product.variants.find(v => v.price === minPrice) || product.variants[0]
+  const availableStock = typeof defaultVariant?.stock === 'number' ? defaultVariant.stock : product.stock
+  const isOutOfStock = typeof availableStock === 'number' && availableStock <= 0
   const cartItem = items.find(item => item.productId === product.id && item.variantId === defaultVariant.id)
   const quantity = cartItem?.quantity || 0
 
   const handleAdd = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    if (isOutOfStock) {
+      toast.error('This product is currently out of stock')
+      return
+    }
     await addToCart({
       productId: product.id,
       variantId: defaultVariant.id,
@@ -39,6 +46,10 @@ export function ProductCard({ product }: ProductCardProps) {
   const handleUpdate = async (e: React.MouseEvent, newQuantity: number) => {
     e.preventDefault()
     e.stopPropagation()
+    if (newQuantity > quantity && typeof availableStock === 'number' && newQuantity > availableStock) {
+      toast.error(`Only ${availableStock} available in stock`)
+      return
+    }
     await updateQuantity(product.id, defaultVariant.id, newQuantity)
   }
 
@@ -64,6 +75,11 @@ export function ProductCard({ product }: ProductCardProps) {
           {product.tags.includes('Best Seller') && (
             <div className="bg-[#1a5f48] text-white px-2 py-1 rounded-full text-[11px] font-bold shadow-sm flex items-center gap-1">
               Best Seller
+            </div>
+          )}
+          {isOutOfStock && (
+            <div className="bg-red-600 text-white px-2 py-1 rounded-full text-[11px] font-bold shadow-sm">
+              Out of Stock
             </div>
           )}
         </div>
@@ -111,13 +127,21 @@ export function ProductCard({ product }: ProductCardProps) {
                 <Minus size={16} />
               </button>
               <span className="font-bold text-[#1a5f48] min-w-[1rem] text-center">{quantity}</span>
-              <button onClick={(e) => handleUpdate(e, quantity + 1)} className="p-1 hover:bg-[#f0f0f0] rounded-md transition-colors text-[#1a5f48]">
+              <button
+                onClick={(e) => handleUpdate(e, quantity + 1)}
+                disabled={typeof availableStock === 'number' && quantity >= availableStock}
+                className="p-1 hover:bg-[#f0f0f0] rounded-md transition-colors text-[#1a5f48] disabled:opacity-40 disabled:cursor-not-allowed"
+              >
                 <Plus size={16} />
               </button>
             </div>
           ) : (
-            <button onClick={handleAdd} className="px-5 py-2 border-2 border-[#1a5f48] text-[#1a5f48] font-bold rounded-lg hover:bg-[#1a5f48] hover:text-white transition-colors text-sm">
-              ADD
+            <button
+              onClick={handleAdd}
+              disabled={isOutOfStock}
+              className="px-5 py-2 border-2 border-[#1a5f48] text-[#1a5f48] font-bold rounded-lg hover:bg-[#1a5f48] hover:text-white transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[#1a5f48]"
+            >
+              {isOutOfStock ? 'OUT OF STOCK' : 'ADD'}
             </button>
           )}
         </div>

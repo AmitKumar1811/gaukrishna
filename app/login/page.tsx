@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { AuthForm } from '@/components/auth/auth-form'
 import { Metadata } from 'next'
 import Image from 'next/image'
@@ -13,7 +14,9 @@ export default function LoginPage() {
             <div className="w-full overflow-hidden bg-card shadow-xl border border-white/50 relative">
                 <div className="grid lg:grid-cols-2 min-h-screen">
                     <div className="p-8 md:p-16 lg:p-20 flex flex-col justify-center relative">
-                        <AuthForm />
+                        <Suspense fallback={<div className="text-center text-muted-foreground">Loading...</div>}>
+                            <AuthForm />
+                        </Suspense>
                     </div>
                     <div className="hidden lg:block relative p-4">
                         <div className="h-full w-full rounded-[2rem] overflow-hidden relative">

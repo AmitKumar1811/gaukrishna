@@ -116,7 +116,7 @@ export const placeOrderFromCart = async (data: { items: any[], address: any, cou
     }
 };
 
-export const buyNow = async (data: { productId: string; quantity: number; address: any; couponCode?: string }) => {
+export const buyNow = async (data: { productId: string; quantity: number; address: any; couponCode?: string; variantId?: string }) => {
     try {
         const response = await apiClient.post(`${ORDERS}/buy-now`, data);
         return response.data;

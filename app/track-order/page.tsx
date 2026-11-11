@@ -15,10 +15,16 @@ function TrackOrderContent() {
     
     const [order, setOrder] = useState<any>(null)
     const [isLoading, setIsLoading] = useState(!!orderId)
+    const [manualOrderId, setManualOrderId] = useState('')
 
     useEffect(() => {
         const fetchOrder = async () => {
-            if (!orderId) return
+            if (!orderId) {
+                setOrder(null)
+                setIsLoading(false)
+                return
+            }
+            setIsLoading(true)
             try {
                 const data = await getOrderById(orderId)
                 setOrder(data)
@@ -57,7 +63,7 @@ function TrackOrderContent() {
                     </div>
                     
                     <h1 className="text-3xl font-bold font-serif text-gray-900 mb-2">Order Tracking</h1>
-                    <p className="text-gray-500 mb-8">Order #{order.razorpayOrderId || order._id?.slice(-6)}</p>
+                    <p className="text-gray-500 mb-8">Order #{order.customOrderId || order.razorpayOrderId || order._id?.slice(-6)}</p>
 
                     <div className="bg-gray-50 rounded-xl p-6 mb-8 text-left">
                         <div className="grid grid-cols-2 gap-4">
@@ -71,6 +77,26 @@ function TrackOrderContent() {
                             </div>
                         </div>
                     </div>
+
+                    {Array.isArray(order.trackingHistory) && order.trackingHistory.length > 0 && (
+                        <div className="mb-8 text-left space-y-3">
+                            <p className="text-sm font-semibold text-gray-900">Tracking Updates</p>
+                            <div className="space-y-3 border-l-2 border-[#1a5f48]/30 pl-4">
+                                {[...order.trackingHistory].reverse().map((event: any, idx: number) => (
+                                    <div key={idx} className="text-sm">
+                                        <p className="font-medium text-gray-900">{event.status}</p>
+                                        {event.location && <p className="text-gray-600">{event.location}</p>}
+                                        {event.instructions && <p className="text-xs text-gray-500">{event.instructions}</p>}
+                                        {event.statusDateTime && (
+                                            <p className="text-xs text-gray-400">
+                                                {new Date(event.statusDateTime).toLocaleString()}
+                                            </p>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {trackingUrl ? (
                         <a 
@@ -103,21 +129,27 @@ function TrackOrderContent() {
             <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
                 To track your order please enter your Order ID in the box below and press the "Track" button. This was given to you on your receipt and in the confirmation email you should have received.
             </p>
-            <div className="max-w-md mx-auto space-y-4">
+            <form
+                onSubmit={(e) => {
+                    e.preventDefault()
+                    if (manualOrderId.trim()) {
+                        router.push(`/track-order?orderId=${encodeURIComponent(manualOrderId.trim())}`)
+                    }
+                }}
+                className="max-w-md mx-auto space-y-4"
+            >
                 <input
                     type="text"
+                    value={manualOrderId}
+                    onChange={(e) => setManualOrderId(e.target.value)}
                     placeholder="Order ID"
                     className="w-full px-4 py-3 border border-gray-300 rounded focus:ring-[#1a5f48] focus:border-[#1a5f48]"
+                    required
                 />
-                <input
-                    type="email"
-                    placeholder="Billing Email"
-                    className="w-full px-4 py-3 border border-gray-300 rounded focus:ring-[#1a5f48] focus:border-[#1a5f48]"
-                />
-                <button className="w-full bg-[#1a5f48] text-white py-3 rounded hover:bg-[#154d3b] transition-colors font-semibold">
+                <button type="submit" className="w-full bg-[#1a5f48] text-white py-3 rounded hover:bg-[#154d3b] transition-colors font-semibold">
                     Track
                 </button>
-            </div>
+            </form>
         </div>
     )
 }

@@ -14,7 +14,8 @@ interface WishlistItem {
     image: string;
     price: number | string;
     originalPrice?: number | string;
-    stock?: string;
+    stock?: string | number;
+    weight?: string;
     description?: string;
     images?: string[];
     gst_inclusive_price?: number;
@@ -70,12 +71,22 @@ export default function WishlistPage() {
     }
 
     const handleAddToCart = async (item: WishlistItem) => {
+        if (typeof item.stock === 'number' && item.stock <= 0) {
+            toast.error('This product is currently out of stock')
+            return
+        }
         let variantId = 'default';
-        let size = 'Standard';
+        let size = item.weight
+            ? (/[a-zA-Z]$/.test(String(item.weight).trim()) ? String(item.weight).trim() : `${String(item.weight).trim()}g`)
+            : 'Standard';
         let price = typeof item.price === 'string' ? parseFloat(String(item.price).replace(/[^0-9.]/g, '')) : (Number(item.gst_inclusive_price) || Number(item.price) || 0);
 
         if (item.variants && item.variants.length > 0) {
             const variant = item.variants[0];
+            if (typeof variant.stock === 'number' && variant.stock <= 0) {
+                toast.error('This product is currently out of stock')
+                return
+            }
             variantId = variant.id;
             size = variant.size;
             price = variant.price;

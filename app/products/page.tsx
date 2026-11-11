@@ -24,8 +24,8 @@ export async function generateMetadata({ searchParams }: ProductsPageProps): Pro
   const query = parseProductsPageQuery(resolvedSearchParams)
   
   return {
-    title: getProductsPageTitle(query) + ' - Gau Krishna',
-    description: getProductsPageDescription(query),
+    title: getProductsPageTitle(query, []) + ' - Gau Krishna',
+    description: getProductsPageDescription(query.category),
   }
 }
 

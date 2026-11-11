@@ -8,7 +8,8 @@ import { SuccessIcon, OrderDetailCard, NextSteps, ActionButtons } from './order-
 function OrderSuccessContent() {
   const searchParams = useSearchParams()
   const orderId = searchParams.get('orderId') || Math.random().toString(36).substring(2, 11).toUpperCase()
-  const total = parseInt(searchParams.get('total') || '0').toLocaleString()
+  const parsedTotal = Number(searchParams.get('total') || '0')
+  const total = (Number.isFinite(parsedTotal) ? parsedTotal : 0).toLocaleString()
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50/50">

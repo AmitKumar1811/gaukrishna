@@ -1,13 +1,18 @@
+'use client'
+
+import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { LayoutGrid, Star, TrendingUp, Zap, Minus, Plus } from 'lucide-react'
 import { useCart } from '@/lib/cart-context'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { iconMap } from '@/lib/fallback-data'
 
 export type CategoryItem = {
   icon: typeof LayoutGrid
+  image?: string
   name: string
   id?: string
   href?: string
@@ -27,6 +32,7 @@ export type DisplayProduct = {
   badgeType?: string
   bestSeller?: boolean
   weight?: string
+  stock?: number
   saveAmount: number
 }
 
@@ -44,8 +50,11 @@ export function mapApiCategoryToCategoryItem(cat: any): CategoryItem | null {
   const slug = (cat?.slug || cat?.name || '').toString().toLowerCase().trim()
   if (!slug) return null
   const icon = iconMap[slug] ?? LayoutGrid
+  const rawImage = cat?.image || cat?.img || cat?.icon
+  const image = typeof rawImage === 'string' && rawImage.trim() ? rawImage.trim() : undefined
   return {
     icon,
+    image,
     name: toTitleCase(cat?.name || slug),
     id: cat?._id || cat?.id,
   }
@@ -73,7 +82,10 @@ export function mapApiProductToDisplayProduct(item: any): DisplayProduct {
     label: bestSeller ? 'Top Rated Choice' : '',
     badgeType: bestSeller ? 'trending' : 'bolt',
     bestSeller,
-    weight: item?.weight ? `${item.weight}g` : undefined,
+    weight: item?.weight
+      ? (/[a-zA-Z]$/.test(String(item.weight).trim()) ? String(item.weight).trim() : `${String(item.weight).trim()}g`)
+      : undefined,
+    stock: typeof item?.stock === 'number' ? item.stock : undefined,
     saveAmount: Math.max(0, originalPrice - price),
   }
 }
@@ -103,6 +115,7 @@ function CategoryButton({
   onClick,
   circleClassName,
   iconClassName,
+  imageClassName,
   labelClassName,
   wrapperClassName,
 }: {
@@ -111,14 +124,28 @@ function CategoryButton({
   onClick: () => void
   circleClassName: string
   iconClassName: string
+  imageClassName: string
   labelClassName: (isActive: boolean) => string
   wrapperClassName: string
 }) {
+  const [imgError, setImgError] = useState(false)
   const Icon = category.icon
+  const showImage = Boolean(category.image) && !imgError
+
   return (
     <button onClick={onClick} className={wrapperClassName} type="button">
       <div className={circleClassName}>
-        <Icon strokeWidth={1.5} className={iconClassName} />
+        {showImage ? (
+          <img
+            key={category.image}
+            src={category.image}
+            alt={category.name}
+            onError={() => setImgError(true)}
+            className={imageClassName}
+          />
+        ) : (
+          <Icon strokeWidth={1.5} className={iconClassName} />
+        )}
       </div>
       <span className={labelClassName(isActive)}>{category.name}</span>
     </button>
@@ -159,10 +186,14 @@ function CategoriesRow({
 
   const circleBase = isMobile ? 'h-14 w-14' : 'h-16 w-16'
   const iconClassName = isMobile ? 'h-6 w-6' : 'h-7 w-7'
-  const circleClassNameFor = (isActive: boolean) =>
-    `${circleBase} flex items-center justify-center rounded-full border-2 transition-all duration-300 ${isActive
-      ? 'bg-[#1a5f48] border-[#1a5f48] text-white'
-      : `bg-white border-[#1a5f48] text-[#1a5f48]${isMobile ? '' : ' hover:bg-[#e8f3ee]'}`
+  const imageClassName = isMobile ? 'h-8 w-8 object-contain' : 'h-9 w-9 object-contain'
+  const circleClassNameFor = (isActive: boolean, hasImage: boolean) =>
+    `${circleBase} flex items-center justify-center rounded-full border-2 overflow-hidden transition-all duration-300 ${
+      isActive
+        ? hasImage
+          ? 'bg-[#e8f3ee] border-[#1a5f48] text-[#1a5f48]'
+          : 'bg-[#1a5f48] border-[#1a5f48] text-white'
+        : `bg-white border-[#1a5f48] text-[#1a5f48]${isMobile ? '' : ' hover:bg-[#e8f3ee]'}`
     }`
 
   const labelClassName = (isActive: boolean) =>
@@ -188,8 +219,9 @@ function CategoriesRow({
               isActive={isActive}
               onClick={() => onSelect(category)}
               wrapperClassName={wrapperClassName}
-              circleClassName={circleClassNameFor(isActive)}
+              circleClassName={circleClassNameFor(isActive, Boolean(category.image))}
               iconClassName={iconClassName}
+              imageClassName={imageClassName}
               labelClassName={labelClassName}
             />
           )
@@ -220,12 +252,17 @@ function ProductTile({ product }: { product: DisplayProduct }) {
   const { items, addToCart, updateQuantity } = useCart()
   const router = useRouter()
 
+  const isOutOfStock = typeof product.stock === 'number' && product.stock <= 0
   const cartItem = items.find(item => item.productId === String(product.id))
   const cartQuantity = cartItem?.quantity || 0
 
   const handleAdd = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    if (isOutOfStock) {
+      toast.error('This product is currently out of stock')
+      return
+    }
     await addToCart({
       productId: String(product.id),
       variantId: cartItem?.variantId || 'default',
@@ -239,6 +276,10 @@ function ProductTile({ product }: { product: DisplayProduct }) {
   const handleUpdate = async (e: React.MouseEvent, newQuantity: number) => {
     e.preventDefault()
     e.stopPropagation()
+    if (newQuantity > cartQuantity && typeof product.stock === 'number' && newQuantity > product.stock) {
+      toast.error(`Only ${product.stock} available in stock`)
+      return
+    }
     if (cartItem) {
       await updateQuantity(cartItem.productId, cartItem.variantId, newQuantity)
     }
@@ -247,8 +288,12 @@ function ProductTile({ product }: { product: DisplayProduct }) {
   const handleBuyNow = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    const qty = Math.max(1, cartQuantity)
-    router.push(`/checkout?type=buynow&productId=${product.id}&quantity=${qty}`)
+    if (isOutOfStock) {
+      toast.error('This product is currently out of stock')
+      return
+    }
+    const maxQty = typeof product.stock === 'number' ? Math.min(Math.max(1, cartQuantity), product.stock) : Math.max(1, cartQuantity)
+    router.push(`/checkout?type=buynow&productId=${product.id}&quantity=${maxQty}`)
   }
 
   return (
@@ -257,6 +302,14 @@ function ProductTile({ product }: { product: DisplayProduct }) {
         <div className="absolute top-0 left-0 z-10">
           <div className="bg-[#1a5f48] text-white text-[10px] font-bold px-2 py-1.5 rounded-br-xl">
             {product.discount}
+          </div>
+        </div>
+      )}
+
+      {isOutOfStock && (
+        <div className="absolute top-2 left-2 z-20">
+          <div className="bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm">
+            Out of Stock
           </div>
         </div>
       )}
@@ -315,7 +368,11 @@ function ProductTile({ product }: { product: DisplayProduct }) {
                   <Minus size={14} />
                 </button>
                 <span className="font-bold text-[#1a5f48] text-[13px] text-center">{cartQuantity}</span>
-                <button onClick={(e) => handleUpdate(e, cartQuantity + 1)} className="p-0.5 hover:bg-[#f0f0f0] rounded-sm transition-colors text-[#1a5f48]">
+                <button
+                  onClick={(e) => handleUpdate(e, cartQuantity + 1)}
+                  disabled={typeof product.stock === 'number' && cartQuantity >= product.stock}
+                  className="p-0.5 hover:bg-[#f0f0f0] rounded-sm transition-colors text-[#1a5f48] disabled:opacity-40 disabled:cursor-not-allowed"
+                >
                   <Plus size={14} />
                 </button>
               </div>
@@ -323,14 +380,16 @@ function ProductTile({ product }: { product: DisplayProduct }) {
               <Button
                 variant="outline"
                 onClick={handleAdd}
-                className="border-[#1a5f48] text-[#1a5f48] hover:bg-[#1a5f48] hover:text-white font-bold h-8 px-2 text-xs tracking-wider uppercase rounded-md transition-colors flex-1"
+                disabled={isOutOfStock}
+                className="border-[#1a5f48] text-[#1a5f48] hover:bg-[#1a5f48] hover:text-white font-bold h-8 px-2 text-xs tracking-wider uppercase rounded-md transition-colors flex-1 disabled:opacity-50"
               >
-                ADD
+                {isOutOfStock ? 'OUT' : 'ADD'}
               </Button>
             )}
             <Button
               onClick={handleBuyNow}
-              className="bg-[#1a5f48] text-white hover:bg-[#154d3b] font-bold h-8 px-2 text-xs tracking-wider uppercase rounded-md transition-colors flex-1"
+              disabled={isOutOfStock}
+              className="bg-[#1a5f48] text-white hover:bg-[#154d3b] font-bold h-8 px-2 text-xs tracking-wider uppercase rounded-md transition-colors flex-1 disabled:opacity-50"
             >
               BUY NOW
             </Button>

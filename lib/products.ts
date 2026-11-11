@@ -4,6 +4,7 @@ export interface ProductVariant {
   price: number
   originalPrice: number
   quantity: string
+  stock?: number
 }
 
 export interface Product {
@@ -21,6 +22,7 @@ export interface Product {
   variants: ProductVariant[]
   benefits: string[]
   certifications: string[]
+  stock?: number
   isBestSeller?: boolean
   isNewLaunch?: boolean
   images?: string[]
@@ -247,6 +249,11 @@ export function getAllCategories(): string[] {
 }
 
 export function mapApiProductToProduct(item: any): Product {
+  const numericStock = typeof item.stock === 'number' ? item.stock : undefined
+  const formattedWeight = item.weight
+    ? (/[a-zA-Z]$/.test(String(item.weight).trim()) ? String(item.weight).trim() : `${String(item.weight).trim()}g`)
+    : 'Standard'
+
   return {
     id: item.id || item._id,
     slug: item.slug || item.id || item._id,
@@ -257,25 +264,32 @@ export function mapApiProductToProduct(item: any): Product {
     images: Array.isArray(item.images) ? item.images.map((img: any) => img.url || img) : [],
     rating: item.rating || 0,
     reviews: item.review_count || 0,
-    category: typeof item.category === 'object' ? item.category?.name : (item.category || 'Uncategorized'),
-    categoryId: typeof item.category === 'object' ? (item.category?._id || item.category?.id) : undefined,
+    category: typeof item.category === 'object'
+      ? item.category?.name
+      : (item.category || (typeof item.categoryId === 'object' ? item.categoryId?.name : undefined) || 'Uncategorized'),
+    categoryId: typeof item.category === 'object'
+      ? (item.category?._id || item.category?.id)
+      : (typeof item.categoryId === 'object' ? (item.categoryId?._id || item.categoryId?.id) : item.categoryId),
     description: item.short_description || item.description || '',
     fullDescription: item.description || '',
     tags: item.is_best_seller ? ['Best Seller'] : [],
+    stock: numericStock,
     variants: item.variants && item.variants.length > 0
       ? item.variants.map((v: any) => ({
         id: v.id || v._id || Math.random().toString(),
         size: v.size || v.weight || 'Standard',
         price: v.price,
         originalPrice: v.mrp || v.price,
-        quantity: v.stock?.toString() || '1'
+        quantity: v.stock?.toString() || '1',
+        stock: typeof v.stock === 'number' ? v.stock : numericStock,
       }))
       : [{
         id: 'default',
-        size: item.weight ? (/[a-zA-Z]$/.test(item.weight) ? item.weight : `${item.weight}g`) : 'Standard',
+        size: formattedWeight,
         price: item.price,
         originalPrice: item.mrp || item.price,
-        quantity: item.stock?.toString() || '1'
+        quantity: item.stock?.toString() || '1',
+        stock: numericStock,
       }],
     benefits: [],
     benefitsHtml: item.benefits || '',

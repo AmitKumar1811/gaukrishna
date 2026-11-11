@@ -3,17 +3,28 @@
 import { useCart } from '@/lib/cart-context'
 import { ShoppingCart } from 'lucide-react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 export function FloatingCart() {
   const { totalItems, totalPrice } = useCart()
+  const pathname = usePathname()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  if (!mounted || totalItems === 0) return null
+  if (
+    !mounted ||
+    totalItems === 0 ||
+    pathname?.startsWith('/cart') ||
+    pathname?.startsWith('/checkout') ||
+    pathname?.startsWith('/order-success') ||
+    pathname?.startsWith('/login')
+  ) {
+    return null
+  }
 
   return (
     <Link href="/cart">

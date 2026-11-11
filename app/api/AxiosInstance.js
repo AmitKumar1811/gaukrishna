@@ -34,9 +34,15 @@ apiClient.interceptors.response.use(
         // Handle global errors here (e.g., 401 Unauthorized)
         if (error.response && error.response.status === 401) {
             if (typeof window !== 'undefined') {
-                // Optional: Logout user on 401
                 localStorage.removeItem('token');
-                window.location.href = '/login';
+                localStorage.removeItem('user');
+                const currentPath = window.location.pathname + window.location.search;
+                if (!window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/register')) {
+                    const loginUrl = currentPath && currentPath !== '/'
+                        ? `/login?redirect=${encodeURIComponent(currentPath)}`
+                        : '/login';
+                    window.location.href = loginUrl;
+                }
             }
         }
         return Promise.reject(error);

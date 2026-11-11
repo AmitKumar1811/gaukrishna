@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 import { getProductBySlug } from '@/app/api/api-service'
+import { toast } from 'sonner'
 
 export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
@@ -138,8 +139,16 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   const cartItem = product && selectedVariant ? items.find(item => item.productId === product.id && item.variantId === selectedVariant.id) : null;
   const cartQuantity = cartItem?.quantity || 0;
   const displayQuantity = Math.max(1, cartQuantity);
+  const availableStock = selectedVariant && typeof selectedVariant.stock === 'number'
+    ? selectedVariant.stock
+    : product.stock;
+  const isOutOfStock = typeof availableStock === 'number' && availableStock <= 0;
 
   const handleAddToCart = async () => {
+    if (isOutOfStock) {
+      toast.error('This product is currently out of stock')
+      return
+    }
     if (selectedVariant && product) {
       await addToCart({
         productId: product.id,
@@ -154,9 +163,26 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
     }
   }
 
+  const handleQuantityChange = async (newQty: number) => {
+    if (!product || !selectedVariant) return
+    if (newQty > cartQuantity && typeof availableStock === 'number' && newQty > availableStock) {
+      toast.error(`Only ${availableStock} available in stock`)
+      return
+    }
+    await updateQuantity(product.id, selectedVariant.id, newQty)
+  }
+
   const handleBuyNow = async () => {
+    if (isOutOfStock) {
+      toast.error('This product is currently out of stock')
+      return
+    }
     if (selectedVariant && product) {
-      router.push(`/checkout?type=buynow&productId=${product.id}&quantity=${displayQuantity}`)
+      const targetQuantity = typeof availableStock === 'number' ? Math.min(displayQuantity, availableStock) : displayQuantity
+      const variantParam = selectedVariant.id && selectedVariant.id !== 'default'
+        ? `&variantId=${encodeURIComponent(selectedVariant.id)}`
+        : ''
+      router.push(`/checkout?type=buynow&productId=${product.id}&quantity=${targetQuantity}${variantParam}`)
     }
   }
 
@@ -302,23 +328,33 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                       ).toLocaleString()}
                     </div>
                   )}
+                  {isOutOfStock ? (
+                    <div className="mt-2 inline-block text-xs font-bold text-red-700 bg-red-50 border border-red-200 px-2.5 py-1 rounded">
+                      Out of Stock
+                    </div>
+                  ) : typeof availableStock === 'number' && availableStock <= 5 ? (
+                    <div className="mt-2 inline-block text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded">
+                      Only {availableStock} left in stock
+                    </div>
+                  ) : null}
                 </div>
               )}
 
               {/* Buttons */}
               <div className="flex gap-4 mb-8">
-                {cartQuantity > 0 ? (
+                {cartQuantity > 0 && selectedVariant ? (
                   <div className="flex-1 flex items-center justify-between border-2 border-[#1a5f48] rounded-md px-4 h-12 bg-white">
                     <button 
-                      onClick={() => updateQuantity(product!.id, selectedVariant.id, cartQuantity - 1)} 
+                      onClick={() => handleQuantityChange(cartQuantity - 1)} 
                       className="p-1 hover:bg-[#f0f0f0] rounded-md transition-colors text-[#1a5f48]"
                     >
                       <Minus size={20} />
                     </button>
                     <span className="font-bold text-[#1a5f48] text-lg text-center">{cartQuantity}</span>
                     <button 
-                      onClick={() => updateQuantity(product!.id, selectedVariant.id, cartQuantity + 1)} 
-                      className="p-1 hover:bg-[#f0f0f0] rounded-md transition-colors text-[#1a5f48]"
+                      onClick={() => handleQuantityChange(cartQuantity + 1)} 
+                      disabled={typeof availableStock === 'number' && cartQuantity >= availableStock}
+                      className="p-1 hover:bg-[#f0f0f0] rounded-md transition-colors text-[#1a5f48] disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <Plus size={20} />
                     </button>
@@ -326,11 +362,14 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                 ) : (
                   <Button
                     onClick={handleAddToCart}
+                    disabled={isOutOfStock}
                     variant="outline"
                     size="lg"
-                    className="flex-1 border-[#1a5f48] text-[#1a5f48] hover:bg-[#1a5f48] hover:text-white font-bold h-12 text-sm tracking-wider uppercase rounded-md transition-colors"
+                    className="flex-1 border-[#1a5f48] text-[#1a5f48] hover:bg-[#1a5f48] hover:text-white font-bold h-12 text-sm tracking-wider uppercase rounded-md transition-colors disabled:opacity-50"
                   >
-                    {addedToCart ? (
+                    {isOutOfStock ? (
+                      'Out of Stock'
+                    ) : addedToCart ? (
                       <span className="flex items-center gap-2">
                         <Check size={20} /> Added to Cart
                       </span>
@@ -342,8 +381,9 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                 
                 <Button
                   onClick={handleBuyNow}
+                  disabled={isOutOfStock}
                   size="lg"
-                  className="flex-1 bg-[#1a5f48] text-white hover:bg-[#154d3b] font-bold h-12 text-sm tracking-wider uppercase rounded-md transition-colors"
+                  className="flex-1 bg-[#1a5f48] text-white hover:bg-[#154d3b] font-bold h-12 text-sm tracking-wider uppercase rounded-md transition-colors disabled:opacity-50"
                 >
                   Buy Now
                 </Button>

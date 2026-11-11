@@ -42,10 +42,11 @@ export default function OrderDetailsPage() {
 
     if (!order) return null
 
-    const statusStr = order.orderStatus || order.status || 'processing'
+    const statusStr = order.delhiveryShipmentStatus || order.orderStatus || order.status || 'processing'
     const displayStatus = statusStr.charAt(0).toUpperCase() + statusStr.slice(1).toLowerCase()
     const dateStr = order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Unknown Date'
-    const displayOrderId = order.razorpayOrderId || `#ORD-${order._id?.slice(-6) || '0000'}`
+    const displayOrderId = order.customOrderId ? `#${order.customOrderId}` : (order.razorpayOrderId || `#ORD-${order._id?.slice(-6) || '0000'}`)
+    const waybill = order.delhiveryWaybill || order.shipmentWaybill
 
     return (
         <div className="min-h-screen flex flex-col bg-gray-50">
@@ -69,7 +70,7 @@ export default function OrderDetailsPage() {
                                     }`}>
                                     {displayStatus}
                                 </span>
-                                {['Shipped', 'Transit', 'In transit'].includes(displayStatus) && (
+                                {(waybill || ['Shipped', 'Transit', 'In transit', 'Manifested', 'Confirmed'].includes(displayStatus)) && (
                                     <Link href={`/track-order?orderId=${order.orderId || order._id}`}>
                                         <button className="px-4 py-2 text-sm font-medium text-white bg-[#1a5f48] rounded-full hover:bg-[#154d3b] transition-colors shadow-sm">
                                             Track Order

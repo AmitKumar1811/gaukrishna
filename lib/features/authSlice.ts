@@ -50,10 +50,14 @@ const authSlice = createSlice({
             if (typeof window !== 'undefined') {
                 const token = localStorage.getItem('token');
                 const user = localStorage.getItem('user');
-                if (token && user) {
-                    state.token = token;
-                    state.user = JSON.parse(user);
-                    state.isAuthenticated = true;
+                if (token && token !== 'null' && token !== 'undefined' && user) {
+                    try {
+                        state.token = token;
+                        state.user = JSON.parse(user);
+                        state.isAuthenticated = true;
+                    } catch {
+                        localStorage.removeItem('user');
+                    }
                 }
             }
         }

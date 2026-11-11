@@ -1,6 +1,7 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
+import { Toaster } from 'sonner'
 import { Header } from '@/components/header'
 import { BottomNav } from '@/components/bottom-nav'
 import { FloatingCart } from '@/components/floating-cart'
@@ -10,7 +11,12 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     const isLoginPage = pathname === '/login'
 
     if (isLoginPage) {
-        return <>{children}</>
+        return (
+            <>
+                {children}
+                <Toaster richColors position="top-right" />
+            </>
+        )
     }
 
     return (
@@ -19,6 +25,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             {children}
             <FloatingCart />
             <BottomNav />
+            <Toaster richColors position="top-right" />
         </>
     )
 }
