@@ -59,23 +59,46 @@ function CheckoutForm() {
   const searchParams = useSearchParams()
   const isBuyNow = searchParams?.get('type') === 'buynow'
   const buyNowProductId = searchParams?.get('productId')
-  const buyNowQuantity = searchParams?.get('quantity') ? parseInt(searchParams?.get('quantity') as string, 10) : 1
+  const parsedQuantity = searchParams?.get('quantity') ? parseInt(searchParams?.get('quantity') as string, 10) : 1
+  const buyNowQuantity = Number.isFinite(parsedQuantity) && parsedQuantity > 0 ? parsedQuantity : 1
   const [buyNowProduct, setBuyNowProduct] = useState<any>(null)
+  const [isLoadingBuyNow, setIsLoadingBuyNow] = useState(false)
+  const [buyNowError, setBuyNowError] = useState('')
 
   useEffect(() => {
     if (isBuyNow && buyNowProductId) {
-      getProductById(buyNowProductId).then(res => {
-        const productData = res.data?.data || res.data;
-        setBuyNowProduct(productData);
-      }).catch(console.error)
+      setIsLoadingBuyNow(true)
+      setBuyNowError('')
+      getProductById(buyNowProductId)
+        .then((res) => {
+          const productData = res.data?.data || res.data
+          if (!productData || !productData.name) {
+            setBuyNowProduct(null)
+            setBuyNowError('Product not found')
+            return
+          }
+          setBuyNowProduct(productData)
+        })
+        .catch((err) => {
+          console.error(err)
+          setBuyNowProduct(null)
+          setBuyNowError(err.response?.data?.message || 'Failed to load product details')
+        })
+        .finally(() => {
+          setIsLoadingBuyNow(false)
+        })
     }
   }, [isBuyNow, buyNowProductId])
 
+  const buyNowSize = buyNowProduct?.weight
+    ? (/[a-zA-Z]$/.test(String(buyNowProduct.weight)) ? String(buyNowProduct.weight) : `${buyNowProduct.weight}g`)
+    : 'Standard'
+
   const displayItems = isBuyNow && buyNowProduct ? [{
-    productId: buyNowProductId as string,
+    productId: buyNowProduct._id || buyNowProduct.id || (buyNowProductId as string),
     variantId: 'default',
     productName: buyNowProduct.name || buyNowProduct.title || 'Product',
-    size: 'Default',
+    size: buyNowSize,
     price: buyNowProduct.price || 0,
     quantity: buyNowQuantity
   }] : items;
@@ -273,7 +296,7 @@ function CheckoutForm() {
       if (isBuyNow && buyNowProductId) {
         // Buy Now flow ignores local storage and sends payload directly
         backendOrder = await buyNow({
-          productId: buyNowProductId,
+          productId: buyNowProduct?._id || buyNowProduct?.id || buyNowProductId,
           quantity: buyNowQuantity,
           address: normalizedAddress,
           couponCode: appliedCoupon?.code
@@ -660,6 +683,12 @@ function CheckoutForm() {
                 <div className="bg-card border border-border rounded-lg p-6">
                   <h2 className="text-xl font-bold text-foreground mb-4">Order Items</h2>
                   <div className="space-y-3">
+                    {isBuyNow && isLoadingBuyNow && (
+                      <p className="text-sm text-muted-foreground">Loading product details...</p>
+                    )}
+                    {isBuyNow && buyNowError && (
+                      <p className="text-sm text-destructive">{buyNowError}</p>
+                    )}
                     {displayItems.map((item) => (
                       <div
                         key={`${item.productId}-${item.variantId}`}
@@ -680,7 +709,7 @@ function CheckoutForm() {
                 <Button
                   type="button"
                   onClick={handlePlaceOrder}
-                  disabled={!selectedAddressId || placingOrder}
+                  disabled={!selectedAddressId || placingOrder || (isBuyNow && (!buyNowProduct || isLoadingBuyNow))}
                   className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base"
                 >
                   {placingOrder ? 'Placing order...' : 'Place Order'}

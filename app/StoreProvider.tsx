@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { Provider } from 'react-redux'
 import { makeStore, AppStore } from '@/lib/store'
 import { initializeAuth } from '@/lib/features/authSlice'
@@ -14,8 +14,11 @@ export default function StoreProvider({
 
     if (!storeRef.current) {
         storeRef.current = makeStore()
-        storeRef.current.dispatch(initializeAuth())
     }
+
+    useEffect(() => {
+        storeRef.current?.dispatch(initializeAuth())
+    }, [])
 
     return <Provider store={storeRef.current}>{children}</Provider>
 }

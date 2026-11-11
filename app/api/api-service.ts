@@ -156,11 +156,24 @@ export const getAllProducts = async (params?: any) => {
     }
 };
 
+const isObjectId = (value: string) => /^[a-f\d]{24}$/i.test(value);
+
 export const getProductById = async (id: string) => {
     try {
-        const response = await apiClient.get(`${PRODUCTS}/${id}`);
+        const endpoint = isObjectId(id) ? `${PRODUCTS}/id/${id}` : `${PRODUCTS}/${id}`;
+        const response = await apiClient.get(endpoint);
         return response;
-    } catch (error) {
+    } catch (error: any) {
+        if (error.response?.status === 404 || error.response?.status === 500) {
+            try {
+                const allRes = await apiClient.get(PRODUCTS, { params: { limit: 1000 } });
+                const products = allRes.data?.data || [];
+                const found = products.find((p: any) => p._id === id || p.id === id || p.slug === id);
+                if (found) return { data: { data: found } };
+            } catch {
+                // Fall through to rethrow the original error
+            }
+        }
         console.error("❌ Error fetching product by ID:", error);
         throw error;
     }
@@ -168,7 +181,8 @@ export const getProductById = async (id: string) => {
 
 export const getProductBySlug = async (slug: string) => {
     try {
-        const response = await apiClient.get(`${PRODUCTS}/${slug}`);
+        const endpoint = isObjectId(slug) ? `${PRODUCTS}/id/${slug}` : `${PRODUCTS}/${slug}`;
+        const response = await apiClient.get(endpoint);
         return response;
     } catch (err: any) {
         if (err.response?.status === 404) {
