@@ -7,6 +7,8 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { IndianPhoneInput } from '@/components/ui/indian-phone-input'
+import { normalizeIndianPhone, validateIndianPhone } from '@/lib/validation'
 
 export default function AddressesPage() {
     const [addresses, setAddresses] = useState<Address[]>([])
@@ -39,13 +41,7 @@ export default function AddressesPage() {
         return undefined
     }
 
-    const validatePhone = (phone: string): string | undefined => {
-        if (!phone || phone.trim().length === 0) return 'Phone number is required'
-        const digitsOnly = phone.replace(/\D/g, '')
-        if (digitsOnly.length < 10) return 'Phone number must be at least 10 digits'
-        if (digitsOnly.length > 15) return 'Phone number must be less than 15 digits'
-        return undefined
-    }
+    const validatePhone = (phone: string): string | undefined => validateIndianPhone(phone)
 
     const validateAddress = (address: string): string | undefined => {
         if (!address || address.trim().length === 0) return 'Address is required'
@@ -78,7 +74,7 @@ export default function AddressesPage() {
     const fetchAddresses = async () => {
         try {
             const data = await getAddresses()
-            setAddresses(data)
+            setAddresses(Array.isArray(data) ? data : (data?.data || []))
         } catch (error) {
             console.error('Failed to fetch addresses:', error)
             toast.error('Failed to load addresses')
@@ -106,10 +102,29 @@ export default function AddressesPage() {
     }
 
     const handleFieldChange = (field: string, value: any) => {
-        setFormData({ ...formData, [field]: value })
+        setFormData((prev) => ({ ...prev, [field]: value }))
+        if (field === 'phone' && typeof value === 'string') {
+            const trimmed = value.trim()
+            if (trimmed && !/^[+]?[\d\s()-]+$/.test(trimmed)) {
+                setErrors((prev) => ({ ...prev, phone: 'Phone number can only contain digits' }))
+                return
+            }
+            if (errors.phone) {
+                const nextError = validateIndianPhone(value)
+                setErrors((prev) => ({ ...prev, phone: nextError || '' }))
+            }
+            return
+        }
         // Clear error for this field when user starts typing
         if (errors[field]) {
-            setErrors({ ...errors, [field]: '' })
+            setErrors((prev) => ({ ...prev, [field]: '' }))
+        }
+    }
+
+    const handleFieldBlur = (field: string) => {
+        if (field === 'phone') {
+            const phoneError = validatePhone(formData.phone || '')
+            setErrors((prev) => ({ ...prev, phone: phoneError || '' }))
         }
     }
 
@@ -145,12 +160,23 @@ export default function AddressesPage() {
 
         setIsSubmitting(true)
 
+        const normalizedPayload: Partial<Address> = {
+            ...formData,
+            name: (formData.name || '').trim(),
+            phone: normalizeIndianPhone(formData.phone || ''),
+            addressLine1: (formData.addressLine1 || '').trim(),
+            addressLine2: (formData.addressLine2 || '').trim(),
+            city: (formData.city || '').trim(),
+            state: (formData.state || '').trim(),
+            pincode: (formData.pincode || '').replace(/\D/g, ''),
+        }
+
         try {
             if (editingId) {
-                await updateAddress(editingId, formData)
+                await updateAddress(editingId, normalizedPayload)
                 toast.success('Address updated successfully')
             } else {
-                await addAddress(formData as Omit<Address, '_id' | 'id'>)
+                await addAddress(normalizedPayload as Omit<Address, '_id' | 'id'>)
                 toast.success('Address added successfully')
             }
 
@@ -278,13 +304,15 @@ export default function AddressesPage() {
                                 <Label htmlFor="phone" className="text-sm font-semibold text-gray-700">
                                     Phone Number <span className="text-red-500">*</span>
                                 </Label>
-                                <Input
+                                <IndianPhoneInput
                                     id="phone"
-                                    type="tel"
+                                    name="phone"
                                     value={formData.phone || ''}
-                                    onChange={(e) => handleFieldChange('phone', e.target.value)}
-                                    className={`h-11 ${errors.phone ? 'border-red-500' : ''}`}
-                                    placeholder="Enter phone number"
+                                    onChange={(val) => handleFieldChange('phone', val)}
+                                    onBlur={() => handleFieldBlur('phone')}
+                                    error={Boolean(errors.phone)}
+                                    heightClassName="[&_.react-tel-input_.form-control]:!h-11"
+                                    placeholder="Enter 10-digit mobile number"
                                 />
                                 {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
                             </div>
@@ -500,7 +528,7 @@ export default function AddressesPage() {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleSetDefault(address._id || address.id || '')}
-                                    className="w-full text-[#1a5f48] border-[#1a5f48] hover:bg-[#dcf0e8]"
+                                    className="w-full text-[#1a5f48] border-[#1a5f48] hover:bg-[#dcf0e8] hover:text-[#1a5f48]"
                                 >
                                     Set as Default
                                 </Button>

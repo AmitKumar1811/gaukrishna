@@ -22,6 +22,8 @@ import {
   validateCoupon
 } from '@/app/api/api-service'
 import { clearStoredCoupon, getStoredCoupon, storeCoupon, type AppliedCoupon } from '@/lib/coupon-storage'
+import { normalizeIndianPhone, validateIndianPhone } from '@/lib/validation'
+import { IndianPhoneInput } from '@/components/ui/indian-phone-input'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -83,6 +85,7 @@ function CheckoutForm() {
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(true)
   const [isSavingAddress, setIsSavingAddress] = useState(false)
   const [addressError, setAddressError] = useState('')
+  const [phoneError, setPhoneError] = useState('')
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null)
   const [showAddressForm, setShowAddressForm] = useState(false)
   const [formData, setFormData] = useState({
@@ -324,7 +327,19 @@ function CheckoutForm() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+    if (name === 'phone') {
+      const trimmed = value.trim()
+      if (trimmed && !/^[+]?[\d\s()-]+$/.test(trimmed)) {
+        setPhoneError('Phone number can only contain digits')
+      } else if (phoneError) {
+        setPhoneError(validateIndianPhone(value) || '')
+      }
+    }
     if (addressError) setAddressError('')
+  }
+
+  const handlePhoneBlur = () => {
+    setPhoneError(validateIndianPhone(formData.phone) || '')
   }
 
   const resetForm = () => {
@@ -342,21 +357,23 @@ function CheckoutForm() {
     })
     setEditingAddressId(null)
     setAddressError('')
+    setPhoneError('')
     setShowAddressForm(false)
   }
 
   const handleSaveAddress = async (e: React.FormEvent) => {
     e.preventDefault()
     setAddressError('')
+    setPhoneError('')
 
-    const phoneDigits = formData.phone.replace(/\D/g, '')
+    const phoneValidationError = validateIndianPhone(formData.phone)
     const pincodeDigits = formData.pincode.replace(/\D/g, '')
     if (!formData.name.trim()) {
       setAddressError('Please enter a full name')
       return
     }
-    if (phoneDigits.length < 10) {
-      setAddressError('Please enter a valid phone number (at least 10 digits)')
+    if (phoneValidationError) {
+      setPhoneError(phoneValidationError)
       return
     }
     if (!formData.addressLine1.trim()) {
@@ -377,7 +394,7 @@ function CheckoutForm() {
       name: formData.name.trim(),
       type: formData.type || 'Home',
       email: formData.email.trim(),
-      phone: formData.phone.trim(),
+      phone: normalizeIndianPhone(formData.phone),
       addressLine1: formData.addressLine1.trim(),
       addressLine2: formData.addressLine2.trim(),
       city: formData.city.trim(),
@@ -414,6 +431,7 @@ function CheckoutForm() {
   const handleEditAddress = (address: any) => {
     setEditingAddressId(address._id || address.id)
     setAddressError('')
+    setPhoneError('')
     setFormData({
       name: address.name || `${address.firstName || ''} ${address.lastName || ''}`.trim(),
       type: address.type || 'Home',
@@ -477,7 +495,7 @@ function CheckoutForm() {
         selectedAddress.name ||
         `${selectedAddress.firstName || ''} ${selectedAddress.lastName || ''}`.trim() ||
         'Customer',
-      phone: selectedAddress.phone || '',
+      phone: normalizeIndianPhone(selectedAddress.phone || ''),
       addressLine1: selectedAddress.addressLine1 || selectedAddress.address || '',
       addressLine2: selectedAddress.addressLine2 || selectedAddress.landmark || selectedAddress.area || '',
       city: selectedAddress.city || '',
@@ -860,14 +878,31 @@ function CheckoutForm() {
                         value={formData.email}
                         onChange={handleInputChange}
                       />
-                      <Input
-                        type="tel"
-                        name="phone"
-                        placeholder="Phone Number"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        required
-                      />
+                      <div>
+                        <IndianPhoneInput
+                          id="checkout-phone"
+                          name="phone"
+                          value={formData.phone}
+                          onChange={(val) => {
+                            setFormData((prev) => ({ ...prev, phone: val }))
+                            const trimmed = val.trim()
+                            if (trimmed && !/^[+]?[\d\s()-]+$/.test(trimmed)) {
+                              setPhoneError('Phone number can only contain digits')
+                            } else if (phoneError) {
+                              setPhoneError(validateIndianPhone(val) || '')
+                            }
+                            if (addressError) setAddressError('')
+                          }}
+                          onBlur={handlePhoneBlur}
+                          error={Boolean(phoneError)}
+                          heightClassName="[&_.react-tel-input_.form-control]:!h-10"
+                          placeholder="Phone Number (10-digit mobile)"
+                          required
+                        />
+                        {phoneError && (
+                          <p className="text-sm text-destructive mt-1">{phoneError}</p>
+                        )}
+                      </div>
                       <Input
                         name="addressLine1"
                         placeholder="Address Line 1"

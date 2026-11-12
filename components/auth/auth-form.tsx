@@ -304,7 +304,7 @@ export function AuthForm() {
             <div className="mb-6">
                 <Button
                     variant="outline"
-                    className="w-full h-10 sm:h-11 border-gray-200 hover:bg-gray-50 hover:border-gray-300 bg-white transition-transform active:scale-[0.98] shadow-sm rounded-lg text-sm sm:text-base font-medium"
+                    className="w-full h-10 sm:h-11 border-gray-200 text-gray-800 hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300 bg-white transition-transform active:scale-[0.98] shadow-sm rounded-lg text-sm sm:text-base font-medium"
                     type="button"
                     onClick={handleGoogleLogin}
                     disabled={isLoading}

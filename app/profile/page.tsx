@@ -10,6 +10,8 @@ import { Edit2, Save, X, User as UserIcon, Mail, Phone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { IndianPhoneInput } from '@/components/ui/indian-phone-input'
+import { normalizeIndianPhone, validateIndianPhone } from '@/lib/validation'
 
 export default function ProfilePage() {
     const { user, token } = useSelector((state: RootState) => state.auth)
@@ -38,19 +40,7 @@ export default function ProfilePage() {
         return undefined
     }
 
-    const validatePhone = (phone: string): string | undefined => {
-        if (!phone || phone.trim().length === 0) {
-            return 'Phone number is required'
-        }
-        const digitsOnly = phone.replace(/\D/g, '')
-        if (digitsOnly.length < 10) {
-            return 'Phone number must be at least 10 digits'
-        }
-        if (digitsOnly.length > 15) {
-            return 'Phone number must be less than 15 digits'
-        }
-        return undefined
-    }
+    const validatePhone = (phone: string): string | undefined => validateIndianPhone(phone)
 
     const handleEditClick = () => {
         if (user) {
@@ -76,12 +66,20 @@ export default function ProfilePage() {
         }
     }
 
-    const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value
-        setFormData({ ...formData, phone: value })
-        if (errors.phone) {
-            setErrors({ ...errors, phone: undefined })
+    const handlePhoneChange = (value: string) => {
+        setFormData((prev) => ({ ...prev, phone: value }))
+        const trimmed = value.trim()
+        if (trimmed && !/^[+]?[\d\s()-]+$/.test(trimmed)) {
+            setErrors((prev) => ({ ...prev, phone: 'Phone number can only contain digits' }))
+            return
         }
+        if (errors.phone) {
+            setErrors((prev) => ({ ...prev, phone: validatePhone(value) }))
+        }
+    }
+
+    const handlePhoneBlur = () => {
+        setErrors((prev) => ({ ...prev, phone: validatePhone(formData.phone) }))
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -101,7 +99,11 @@ export default function ProfilePage() {
 
         setIsLoading(true)
         try {
-            const updatedUser = await updateProfile(formData)
+            const payload = {
+                name: formData.name.trim(),
+                phone: normalizeIndianPhone(formData.phone),
+            }
+            const updatedUser = await updateProfile(payload)
             // Update Redux state
             if (user && token) {
                 dispatch(setCredentials({
@@ -141,7 +143,7 @@ export default function ProfilePage() {
                         variant="outline"
                         size="sm"
                         onClick={handleEditClick}
-                        className="flex items-center gap-2 text-[#1a5f48] border-[#1a5f48] hover:bg-[#dcf0e8] w-full sm:w-auto"
+                        className="flex items-center gap-2 text-[#1a5f48] border-[#1a5f48] hover:bg-[#dcf0e8] hover:text-[#1a5f48] w-full sm:w-auto"
                     >
                         <Edit2 className="h-4 w-4" />
                         Edit Profile
@@ -189,17 +191,16 @@ export default function ProfilePage() {
                                 <Label htmlFor="phone" className="text-sm font-semibold text-gray-700">
                                     Phone Number <span className="text-red-500">*</span>
                                 </Label>
-                                <div className="relative">
-                                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                                    <Input
-                                        id="phone"
-                                        type="tel"
-                                        value={formData.phone}
-                                        onChange={handlePhoneChange}
-                                        className={`pl-10 h-12 ${errors.phone ? 'border-red-500 focus:ring-red-500' : ''}`}
-                                        placeholder="Enter your phone number"
-                                    />
-                                </div>
+                                <IndianPhoneInput
+                                    id="phone"
+                                    name="phone"
+                                    value={formData.phone}
+                                    onChange={handlePhoneChange}
+                                    onBlur={handlePhoneBlur}
+                                    error={Boolean(errors.phone)}
+                                    heightClassName="[&_.react-tel-input_.form-control]:!h-12"
+                                    placeholder="Enter 10-digit mobile number"
+                                />
                                 {errors.phone && (
                                     <p className="text-sm text-red-500 mt-1">{errors.phone}</p>
                                 )}
