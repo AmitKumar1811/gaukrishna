@@ -22,6 +22,29 @@ async function getBlogs() {
     }
 }
 
+function getPlainText(html: unknown) {
+    if (typeof html !== 'string') return ''
+
+    let text = html
+    for (let pass = 0; pass < 2; pass += 1) {
+        text = text
+            .replace(/&nbsp;|&#160;|&#x0*a0;/gi, ' ')
+            .replace(/&amp;/gi, '&')
+            .replace(/&quot;/gi, '"')
+            .replace(/&#39;|&apos;/gi, "'")
+            .replace(/&lt;/gi, '<')
+            .replace(/&gt;/gi, '>')
+            .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
+            .replace(/&#x([\da-f]+);/gi, (_, code) => String.fromCodePoint(Number.parseInt(code, 16)))
+    }
+
+    return text
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\u00a0/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+}
+
 export default async function BlogsPage() {
     const blogs = await getBlogs()
 
@@ -37,7 +60,11 @@ export default async function BlogsPage() {
                         </div>
                     ) : (
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {blogs.map((blog: any) => (
+                            {blogs.map((blog: any) => {
+                                const description = getPlainText(blog.content)
+                                const excerpt = description.slice(0, 150)
+
+                                return (
                                 <div key={blog._id || blog.id} className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-white flex flex-col">
                                     <div className="h-48 bg-gray-200 relative">
                                         {blog.image ? (
@@ -53,20 +80,16 @@ export default async function BlogsPage() {
                                             {blog.createdAt ? new Date(blog.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Recent'}
                                         </p>
                                         <h3 className="text-xl font-bold text-gray-900 mb-2">{blog.title}</h3>
-                                        <p className="text-gray-600 mb-4 line-clamp-3 text-sm flex-grow">
-                                            {(blog.content || '')
-                                                .replace(/<[^>]*>/g, ' ')
-                                                .replace(/\s+/g, ' ')
-                                                .trim()
-                                                .slice(0, 150)}
-                                            {(blog.content || '').length > 150 ? '...' : ''}
+                                        <p className="text-gray-600 mb-4 line-clamp-3 text-sm leading-relaxed break-words flex-grow">
+                                            {excerpt}{description.length > excerpt.length ? '…' : ''}
                                         </p>
                                         <Link href={`/blogs/${blog.slug || blog._id}`} className="text-[#1a5f48] font-semibold hover:underline mt-auto inline-block">
                                             Read More &rarr;
                                         </Link>
                                     </div>
                                 </div>
-                            ))}
+                                )
+                            })}
                         </div>
                     )}
                 </div>

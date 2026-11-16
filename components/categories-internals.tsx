@@ -329,7 +329,7 @@ function ProductTile({ product }: { product: DisplayProduct }) {
           alt={product.name}
           sizes="(min-width: 1024px) 280px, 100vw"
           fill
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          className="object-contain object-center transition-transform duration-500 group-hover:scale-105"
         />
       </Link>
 

@@ -198,11 +198,11 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
             <span className="text-muted-foreground">/</span>
             <span className="text-muted-foreground line-clamp-1">{product.name}</span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+          <div className="grid min-w-0 grid-cols-1 md:grid-cols-2 gap-8 mb-12">
             {/* Product Image */}
-            <div className="flex flex-col gap-4">
+            <div className="min-w-0 flex flex-col gap-4">
               <div 
-                className="relative flex items-center justify-center rounded-lg overflow-hidden h-[500px] cursor-crosshair bg-muted"
+                className="relative flex items-center justify-center rounded-lg overflow-hidden h-[400px] sm:h-[500px] cursor-crosshair bg-muted p-4"
                 onMouseEnter={() => setIsZoomed(true)}
                 onMouseLeave={() => {
                   setIsZoomed(false)
@@ -217,7 +217,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                     e.currentTarget.onerror = null;
                     e.currentTarget.src = "/placeholder.svg";
                   }}
-                  className={`w-full h-full object-cover transition-transform duration-100 ease-out pointer-events-none ${isZoomed ? 'scale-[2]' : 'scale-100'}`}
+                  className={`w-full h-full object-contain object-center transition-transform duration-100 ease-out pointer-events-none ${isZoomed ? 'scale-[2]' : 'scale-100'}`}
                   style={isZoomed ? zoomStyle : {}}
                 />
               </div>
@@ -236,7 +236,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                           e.currentTarget.onerror = null;
                           e.currentTarget.src = "/placeholder.svg";
                         }}
-                        className="w-full h-full object-cover" 
+                        className="w-full h-full object-contain object-center"
                       />
                     </button>
                   ))}
@@ -245,10 +245,10 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
             </div>
 
             {/* Product Info */}
-            <div>
+            <div className="min-w-0 overflow-hidden">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h1 className="text-3xl font-bold text-primary mb-2">{product.name}</h1>
+                  <h1 className="text-3xl font-bold text-primary mb-2 break-words">{product.name}</h1>
                   <div className="flex items-center gap-2 mb-4">
                     <div className="flex items-center gap-1">
                       {[...Array(5)].map((_, i) => (
@@ -270,7 +270,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                 </div>
               </div>
 
-              <p className="text-muted-foreground mb-6">{product.description}</p>
+              <p className="text-muted-foreground mb-6 whitespace-normal break-words">{product.description}</p>
 
               {/* Variants */}
               {product.variants.length > 1 && (
@@ -341,7 +341,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
               )}
 
               {/* Buttons */}
-              <div className="flex gap-4 mb-8">
+              <div className="flex flex-col sm:flex-row gap-4 mb-8">
                 {cartQuantity > 0 && selectedVariant ? (
                   <div className="flex-1 flex items-center justify-between border-2 border-[#1a5f48] rounded-md px-4 h-12 bg-white">
                     <button 
@@ -395,7 +395,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                   <h3 className="font-semibold text-foreground mb-3">Key Benefits</h3>
                   {product.benefitsHtml ? (
                     <div 
-                      className="text-sm text-muted-foreground space-y-2 [&>ul]:space-y-2 [&>ul>li]:flex [&>ul>li]:items-start [&>ul>li]:gap-2 [&>ul>li]:before:content-['✓'] [&>ul>li]:before:text-primary [&>ul>li]:before:font-bold"
+                      className="max-w-full overflow-hidden whitespace-normal break-words text-sm text-muted-foreground space-y-2 [&_*]:max-w-full [&_*]:whitespace-normal [&_*]:break-words [&>ul]:space-y-2 [&>ul>li]:flex [&>ul>li]:items-start [&>ul>li]:gap-2 [&>ul>li]:before:content-['✓'] [&>ul>li]:before:text-primary [&>ul>li]:before:font-bold"
                       dangerouslySetInnerHTML={{ __html: product.benefitsHtml }}
                     />
                   ) : (
@@ -415,7 +415,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                 <div className="border-t border-border pt-6 mt-6">
                   <h3 className="font-semibold text-foreground mb-3">Ingredients</h3>
                   <div 
-                    className="text-sm text-muted-foreground space-y-2 [&>ul]:list-disc [&>ul]:pl-4"
+                    className="max-w-full overflow-hidden whitespace-normal break-words text-sm text-muted-foreground space-y-2 [&_*]:max-w-full [&_*]:whitespace-normal [&_*]:break-words [&>ul]:list-disc [&>ul]:pl-4"
                     dangerouslySetInnerHTML={{ __html: product.ingredientsHtml }}
                   />
                 </div>
@@ -427,18 +427,18 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
           <div className="border-t border-border pt-8">
             <h2 className="text-2xl font-bold text-primary mb-4">About This Product</h2>
             <div 
-               className="text-muted-foreground leading-relaxed mb-8 space-y-4 [&>p]:mb-4 [&>ul]:list-disc [&>ul]:pl-5 [&>ul>li]:mb-1" 
+               className="max-w-full overflow-hidden whitespace-normal break-words text-muted-foreground leading-relaxed mb-8 space-y-4 [&_*]:max-w-full [&_*]:whitespace-normal [&_*]:break-words [&>p]:mb-4 [&>ul]:list-disc [&>ul]:pl-5 [&>ul>li]:mb-1"
                dangerouslySetInnerHTML={{ __html: product.fullDescription }} 
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
               {/* All Benefits */}
               {(product.benefitsHtml || (product.benefits && product.benefits.length > 0)) && (
-                <div>
+                <div className="min-w-0 overflow-hidden">
                   <h3 className="font-semibold text-foreground mb-4">Complete Benefits</h3>
                   {product.benefitsHtml ? (
                     <div 
-                      className="text-sm text-muted-foreground space-y-2 [&>ul]:space-y-2 [&>ul>li]:flex [&>ul>li]:items-start [&>ul>li]:gap-2 [&>ul>li]:before:content-['✓'] [&>ul>li]:before:text-primary [&>ul>li]:before:font-bold"
+                      className="max-w-full overflow-hidden whitespace-normal break-words text-sm text-muted-foreground space-y-2 [&_*]:max-w-full [&_*]:whitespace-normal [&_*]:break-words [&>ul]:space-y-2 [&>ul>li]:flex [&>ul>li]:items-start [&>ul>li]:gap-2 [&>ul>li]:before:content-['✓'] [&>ul>li]:before:text-primary [&>ul>li]:before:font-bold"
                       dangerouslySetInnerHTML={{ __html: product.benefitsHtml }}
                     />
                   ) : (
@@ -453,21 +453,6 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                   )}
                 </div>
               )}
-
-              {/* Certifications */}
-              <div>
-                <h3 className="font-semibold text-foreground mb-4">Quality Certifications</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {product.certifications.map((cert, idx) => (
-                    <div
-                      key={idx}
-                      className="p-3 bg-muted rounded-lg text-sm text-center text-foreground font-medium border border-border"
-                    >
-                      {cert}
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
         </div>
