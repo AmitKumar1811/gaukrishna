@@ -500,7 +500,6 @@ function CheckoutForm() {
       addressLine2: selectedAddress.addressLine2 || selectedAddress.landmark || selectedAddress.area || '',
       city: selectedAddress.city || '',
       state: selectedAddress.state || '',
-      country: selectedAddress.country || 'India',
       pincode: selectedAddress.pincode || '',
       ...(selectedAddress.email || formData.email ? { email: selectedAddress.email || formData.email } : {}),
     }
