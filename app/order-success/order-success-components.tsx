@@ -1,4 +1,4 @@
-import { Check, Package, MapPin, Mail, LucideIcon } from 'lucide-react'
+import { Check, Package, MapPin, Mail, Banknote, LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
@@ -10,14 +10,17 @@ export const SuccessIcon = () => (
   </div>
 )
 
-export const OrderDetailCard = ({ orderId, total }: { orderId: string; total: string }) => (
+export const OrderDetailCard = ({ orderId, total, isCod = false }: { orderId: string; total: string; isCod?: boolean }) => (
   <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6 sm:p-8 mb-8">
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 mb-8">
       <InfoItem icon={Package} label="Order ID" value={`#${orderId}`} />
-      <InfoItem icon={Check} label="Order Total" value={`₹${total}`} highlight />
+      <InfoItem icon={Check} label={isCod ? 'Payable on Delivery' : 'Order Total'} value={`₹${total}`} highlight />
     </div>
 
     <div className="space-y-6 pt-6 sm:pt-8 border-t border-gray-50">
+      {isCod && (
+        <DeliveryItem icon={Banknote} title="Cash on Delivery" desc={`Please keep ₹${total} ready via cash or UPI at delivery`} />
+      )}
       <DeliveryItem icon={MapPin} title="Expected Delivery" desc="3-5 business days to your address" />
       <DeliveryItem icon={Mail} title="Confirmation Email" desc="A confirmation email has been sent" />
     </div>

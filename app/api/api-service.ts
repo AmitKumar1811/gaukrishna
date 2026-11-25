@@ -106,7 +106,7 @@ export const validateCoupon = async (data: { code: string; subtotal: number }) =
     return response.data;
 };
 
-export const placeOrderFromCart = async (data: { items: any[], address: any, couponCode?: string }) => {
+export const placeOrderFromCart = async (data: { items: any[], address: any, couponCode?: string, paymentMethod?: 'PREPAID' | 'COD' }) => {
     try {
         const response = await apiClient.post(ORDERS, data);
         return response.data;
@@ -116,7 +116,7 @@ export const placeOrderFromCart = async (data: { items: any[], address: any, cou
     }
 };
 
-export const buyNow = async (data: { productId: string; quantity: number; address: any; couponCode?: string; variantId?: string }) => {
+export const buyNow = async (data: { productId: string; quantity: number; address: any; couponCode?: string; variantId?: string; paymentMethod?: 'PREPAID' | 'COD' }) => {
     try {
         const response = await apiClient.post(`${ORDERS}/buy-now`, data);
         return response.data;

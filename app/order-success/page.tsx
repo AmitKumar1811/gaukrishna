@@ -10,6 +10,7 @@ function OrderSuccessContent() {
   const orderId = searchParams.get('orderId') || Math.random().toString(36).substring(2, 11).toUpperCase()
   const parsedTotal = Number(searchParams.get('total') || '0')
   const total = (Number.isFinite(parsedTotal) ? parsedTotal : 0).toLocaleString()
+  const isCod = searchParams.get('method') === 'cod'
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50/50">
@@ -26,7 +27,7 @@ function OrderSuccessContent() {
             </p>
           </div>
 
-          <OrderDetailCard orderId={orderId} total={total} />
+          <OrderDetailCard orderId={orderId} total={total} isCod={isCod} />
           <NextSteps />
           <ActionButtons />
         </div>

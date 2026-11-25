@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Footer } from '@/components/footer'
 import { useCart } from '@/lib/cart-context'
 import { Button } from '@/components/ui/button'
-import { AlertTriangle, Check } from 'lucide-react'
+import { AlertTriangle, Banknote, Check, CreditCard } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { 
@@ -101,6 +101,7 @@ function CheckoutForm() {
     pincode: '',
   })
   const [orderPlaced, setOrderPlaced] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState<'PREPAID' | 'COD'>('PREPAID')
   const [placingOrder, setPlacingOrder] = useState(false)
   const [paymentLoading, setPaymentLoading] = useState(false)
   const [checkoutError, setCheckoutError] = useState('')
@@ -463,11 +464,14 @@ function CheckoutForm() {
     }
   }
 
+  const COD_EXTRA_CHARGE = 50
   const deliveryFee = appliedCoupon
     ? appliedCoupon.shippingFee
     : (displayTotalPrice > 0 && displayTotalPrice < 500 ? 50 : 0)
   const discount = appliedCoupon?.discount || 0
-  const finalTotal = appliedCoupon ? appliedCoupon.total : displayTotalPrice + deliveryFee
+  const codFee = paymentMethod === 'COD' ? COD_EXTRA_CHARGE : 0
+  const baseTotal = appliedCoupon ? appliedCoupon.total : displayTotalPrice + deliveryFee
+  const finalTotal = baseTotal + codFee
 
   const handlePlaceOrder = async () => {
     setCheckoutError('')
@@ -530,7 +534,9 @@ function CheckoutForm() {
         return
       }
 
-      setPaymentLoading(true)
+      if (paymentMethod === 'PREPAID') {
+        setPaymentLoading(true)
+      }
 
       let backendOrder: any
       if (isBuyNow && buyNowProductId) {
@@ -541,6 +547,7 @@ function CheckoutForm() {
           address: normalizedAddress,
           ...(appliedCoupon?.code ? { couponCode: appliedCoupon.code } : {}),
           ...(buyNowResolvedVariantId && buyNowResolvedVariantId !== 'default' ? { variantId: buyNowResolvedVariantId } : {}),
+          ...(paymentMethod === 'COD' ? { paymentMethod: 'COD' } : {}),
         })
       } else {
         // Cart Checkout flow
@@ -552,6 +559,7 @@ function CheckoutForm() {
           })),
           address: normalizedAddress,
           ...(appliedCoupon?.code ? { couponCode: appliedCoupon.code } : {}),
+          ...(paymentMethod === 'COD' ? { paymentMethod: 'COD' } : {}),
         })
       }
 
@@ -568,6 +576,21 @@ function CheckoutForm() {
       if (!appOrderId) {
         console.error('Missing order ID in response:', backendOrder)
         throw new Error('Could not find order ID from checkout response')
+      }
+
+      if (paymentMethod === 'COD') {
+        const codOrderId =
+          resData?.customOrderId ||
+          resData?.order?.customOrderId ||
+          appOrderId ||
+          'ORDER'
+        if (!isBuyNow) {
+          clearCart()
+        }
+        clearStoredCoupon()
+        setOrderPlaced(true)
+        router.push(`/order-success?orderId=${encodeURIComponent(codOrderId)}&total=${finalTotal}&method=cod`)
+        return
       }
 
       const orderRes = await createPaymentOrder(appOrderId)
@@ -991,6 +1014,52 @@ function CheckoutForm() {
                   </div>
                 </div>
 
+                {/* Payment Method */}
+                <div className="bg-card border border-border rounded-lg p-6">
+                  <h2 className="text-xl font-bold text-foreground mb-4">Payment Method</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('PREPAID')}
+                      className={`flex items-start gap-3 p-4 rounded-lg border text-left transition-all ${
+                        paymentMethod === 'PREPAID'
+                          ? 'border-primary ring-2 ring-primary/20 bg-primary/5'
+                          : 'border-border hover:border-primary/40'
+                      }`}
+                    >
+                      <CreditCard className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-semibold text-sm text-foreground">Online Payment</span>
+                          {paymentMethod === 'PREPAID' && <Check className="h-4 w-4 text-primary shrink-0" />}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">UPI, Cards, Netbanking via Razorpay</p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('COD')}
+                      className={`flex items-start gap-3 p-4 rounded-lg border text-left transition-all ${
+                        paymentMethod === 'COD'
+                          ? 'border-primary ring-2 ring-primary/20 bg-primary/5'
+                          : 'border-border hover:border-primary/40'
+                      }`}
+                    >
+                      <Banknote className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-semibold text-sm text-foreground">Cash on Delivery</span>
+                          {paymentMethod === 'COD' && <Check className="h-4 w-4 text-primary shrink-0" />}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Pay at delivery time (+₹{COD_EXTRA_CHARGE} COD charge)
+                        </p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
                 {(stockIssueError || checkoutError) && (
                   <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
                     <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
@@ -1022,7 +1091,9 @@ function CheckoutForm() {
                     ? 'Opening payment...'
                     : placingOrder
                       ? 'Placing order...'
-                      : 'Place Order'}
+                      : paymentMethod === 'COD'
+                        ? `Place COD Order (₹${finalTotal.toLocaleString()})`
+                        : 'Place Order'}
                 </Button>
               </div>
             </div>
@@ -1091,6 +1162,12 @@ function CheckoutForm() {
                     <span className="text-muted-foreground">Shipping</span>
                     <span className="text-foreground">{deliveryFee > 0 ? `₹${deliveryFee}` : 'Free'}</span>
                   </div>
+                  {codFee > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">COD Charge</span>
+                      <span className="text-foreground">₹{codFee}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Tax</span>
                     <span className="text-foreground">Included in price</span>
