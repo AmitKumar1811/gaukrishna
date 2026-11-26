@@ -598,7 +598,7 @@ function CheckoutForm() {
       const rpAmount = orderRes?.data?.amount || orderRes?.amount
       const rpCurrency = orderRes?.data?.currency || orderRes?.currency || 'INR'
 
-      const razorpayKey = process.env.NEXT_PRIVATE_RAZORPAY_KEY_ID || orderRes?.data?.key || orderRes?.key || ''
+      const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || orderRes?.data?.key || orderRes?.key || ''
       if (!razorpayKey) {
         throw new Error('Payment gateway key is not configured')
       }
@@ -1022,8 +1022,8 @@ function CheckoutForm() {
                       type="button"
                       onClick={() => setPaymentMethod('PREPAID')}
                       className={`flex items-start gap-3 p-4 rounded-lg border text-left transition-all ${paymentMethod === 'PREPAID'
-                          ? 'border-primary ring-2 ring-primary/20 bg-primary/5'
-                          : 'border-border hover:border-primary/40'
+                        ? 'border-primary ring-2 ring-primary/20 bg-primary/5'
+                        : 'border-border hover:border-primary/40'
                         }`}
                     >
                       <CreditCard className="h-5 w-5 text-primary shrink-0 mt-0.5" />
@@ -1040,8 +1040,8 @@ function CheckoutForm() {
                       type="button"
                       onClick={() => setPaymentMethod('COD')}
                       className={`flex items-start gap-3 p-4 rounded-lg border text-left transition-all ${paymentMethod === 'COD'
-                          ? 'border-primary ring-2 ring-primary/20 bg-primary/5'
-                          : 'border-border hover:border-primary/40'
+                        ? 'border-primary ring-2 ring-primary/20 bg-primary/5'
+                        : 'border-border hover:border-primary/40'
                         }`}
                     >
                       <Banknote className="h-5 w-5 text-primary shrink-0 mt-0.5" />
