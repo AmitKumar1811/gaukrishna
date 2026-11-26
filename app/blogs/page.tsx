@@ -5,8 +5,39 @@ import Link from 'next/link'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Blog - Gau Krishna',
-  description: 'Read the latest updates, wellness tips, and Ayurvedic insights from Gau Krishna. Learn how to enrich your lifestyle naturally.',
+  title: 'Blog - Gau Krishna | Ayurveda, A2 Ghee & Cow Care Insights',
+  description:
+    'Read the latest updates, wellness tips, Bilona A2 ghee benefits, and Ayurvedic insights from Gau Krishna & Ram Rasoi.',
+  keywords: [
+    'Gau Krishna Blog',
+    'Ram Rasoi Blog',
+    'A2 Bilona Ghee Benefits',
+    'Ayurvedic Wellness',
+    'Chyawanprash Benefits',
+    'Desi Cow Care',
+  ],
+  alternates: {
+    canonical: '/blogs',
+  },
+  openGraph: {
+    title: 'Blog - Gau Krishna | Ayurveda & A2 Ghee Insights',
+    description:
+      'Wellness tips, Bilona A2 ghee benefits, and Ayurvedic insights from Gau Krishna & Ram Rasoi.',
+    type: 'website',
+    images: [
+      {
+        url: '/images/a2-ghee.webp',
+        alt: 'Gau Krishna Ayurvedic Blog',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Blog - Gau Krishna',
+    description:
+      'Read the latest wellness tips, Bilona A2 ghee benefits, and Ayurvedic insights from Gau Krishna.',
+    images: ['/images/a2-ghee.webp'],
+  },
 }
 
 async function getBlogs() {
@@ -50,8 +81,27 @@ function getPlainText(html: unknown) {
 export default async function BlogsPage() {
     const blogs = await getBlogs()
 
+    const blogListSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'Blog',
+        name: 'Gau Krishna Blog',
+        description: 'Ayurvedic wellness, Bilona A2 Ghee, and Gau Seva articles from Gau Krishna.',
+        blogPost: blogs.slice(0, 20).map((blog: any) => ({
+            '@type': 'BlogPosting',
+            headline: blog.title,
+            url: `/blogs/${blog.slug || blog._id}`,
+            ...(blog.image ? { image: blog.image } : {}),
+            ...(blog.createdAt ? { datePublished: blog.createdAt } : {}),
+            ...(blog.author ? { author: { '@type': 'Person', name: blog.author } } : {}),
+        })),
+    }
+
     return (
         <div className="min-h-screen flex flex-col bg-background">
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(blogListSchema) }}
+            />
             <main className="flex-1">
                 <div className="mx-auto max-w-7xl px-4 py-16">
                     <h1 className="text-4xl font-bold font-serif text-[#1a5f48] mb-12 text-center">Our Blog</h1>
@@ -70,7 +120,13 @@ export default async function BlogsPage() {
                                 <div key={blog._id || blog.id} className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-white flex flex-col">
                                     <div className="h-48 bg-gray-200 relative">
                                         {blog.image ? (
-                                            <img src={blog.image} alt={blog.title} className="w-full h-full object-cover" />
+                                            <img
+                                                src={blog.image}
+                                                alt={blog.title ? `${blog.title} - Gau Krishna` : 'Gau Krishna Blog'}
+                                                loading="lazy"
+                                                decoding="async"
+                                                className="w-full h-full object-cover"
+                                            />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-gray-500 bg-[#f8faf7]">
                                                 No Image

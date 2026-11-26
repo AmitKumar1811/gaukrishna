@@ -2,6 +2,7 @@ import { Footer } from '@/components/footer'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
+import { cache } from 'react'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,12 +11,27 @@ type Blog = {
     title?: string
     slug?: string
     content?: string
+    excerpt?: string
+    metaDescription?: string
     image?: string
     author?: string
     createdAt?: string
+    updatedAt?: string
 }
 
-async function getBlog(slug: string): Promise<Blog | null> {
+function toPlainText(html?: string) {
+    if (!html) return ''
+    return html
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/&nbsp;|&#160;/gi, ' ')
+        .replace(/&amp;/gi, '&')
+        .replace(/&quot;/gi, '"')
+        .replace(/&#39;|&apos;/gi, "'")
+        .replace(/\s+/g, ' ')
+        .trim()
+}
+
+const getBlog = cache(async (slug: string): Promise<Blog | null> => {
     try {
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://backend-gau.onrender.com/api/v1'
         const res = await fetch(`${baseUrl}/blogs/${slug}`, { cache: 'no-store' })
@@ -25,7 +41,7 @@ async function getBlog(slug: string): Promise<Blog | null> {
         console.error('Failed to fetch blog:', error)
         return null
     }
-}
+})
 
 async function getBlogs(): Promise<Blog[]> {
     try {
@@ -53,9 +69,39 @@ function formatDate(date?: string) {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const { slug } = await params
     const blog = await getBlog(slug)
+    const title = blog?.title ? `${blog.title} - Gau Krishna` : 'Blog - Gau Krishna'
+    const plainContent = toPlainText(blog?.metaDescription || blog?.excerpt || blog?.content)
+    const description = plainContent
+        ? `${plainContent.slice(0, 157)}${plainContent.length > 157 ? '...' : ''}`
+        : (blog?.title || 'Read the latest Ayurvedic & Gau Seva insights from Gau Krishna.')
+    const ogImage = blog?.image || '/images/a2-ghee.webp'
+    const canonicalSlug = blog?.slug || slug
+
     return {
-        title: blog?.title ? `${blog.title} - Gau Krishna` : 'Blog - Gau Krishna',
-        description: blog?.title || 'Read the latest from Gau Krishna.',
+        title,
+        description,
+        alternates: {
+            canonical: `/blogs/${canonicalSlug}`,
+        },
+        openGraph: {
+            title,
+            description,
+            type: 'article',
+            ...(blog?.createdAt ? { publishedTime: blog.createdAt } : {}),
+            ...(blog?.author ? { authors: [blog.author] } : {}),
+            images: [
+                {
+                    url: ogImage,
+                    alt: blog?.title || 'Gau Krishna Blog',
+                },
+            ],
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title,
+            description,
+            images: [ogImage],
+        },
     }
 }
 
@@ -68,8 +114,35 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
         .filter((item) => (item.slug || item._id) !== (blog.slug || blog._id))
         .slice(0, 6)
 
+    const plainSummary = toPlainText(blog.metaDescription || blog.excerpt || blog.content)
+    const blogPostingSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'BlogPosting',
+        headline: blog.title || 'Gau Krishna Blog',
+        description: plainSummary ? plainSummary.slice(0, 160) : (blog.title || ''),
+        image: [blog.image || '/images/a2-ghee.webp'],
+        ...(blog.createdAt ? { datePublished: blog.createdAt } : {}),
+        ...(blog.updatedAt || blog.createdAt ? { dateModified: blog.updatedAt || blog.createdAt } : {}),
+        author: {
+            '@type': 'Person',
+            name: blog.author || 'Gau Krishna',
+        },
+        publisher: {
+            '@type': 'Organization',
+            name: 'Gau Krishna',
+            logo: {
+                '@type': 'ImageObject',
+                url: '/logo1.png',
+            },
+        },
+    }
+
     return (
         <div className="min-h-screen flex flex-col bg-background">
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(blogPostingSchema) }}
+            />
             <main className="flex-1">
                 <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-16 lg:px-8">
                     <Link href="/blogs" className="mb-8 inline-flex text-sm font-semibold text-[#1a5f48] hover:underline">
@@ -87,7 +160,9 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
                             {blog.image && (
                                 <img
                                     src={blog.image}
-                                    alt={blog.title || 'Blog'}
+                                    alt={blog.title ? `${blog.title} - Gau Krishna` : 'Gau Krishna Blog'}
+                                    loading="eager"
+                                    decoding="async"
                                     className="mb-10 h-auto max-h-[560px] w-full rounded-2xl bg-gray-50 object-contain object-center shadow-sm"
                                 />
                             )}
@@ -111,7 +186,7 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
                                             <Link key={item._id || item.slug} href={blogHref(item)} className="group flex min-w-0 gap-3">
                                                 <div className="h-20 w-24 shrink-0 overflow-hidden rounded-lg bg-gray-100">
                                                     {item.image ? (
-                                                        <img src={item.image} alt={item.title || 'Blog'} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                                                        <img src={item.image} alt={item.title ? `${item.title} - Gau Krishna` : 'Gau Krishna Blog'} loading="lazy" decoding="async" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
                                                     ) : (
                                                         <div className="flex h-full items-center justify-center text-xs text-gray-400">No image</div>
                                                     )}
@@ -144,7 +219,7 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
                                     <Link key={item._id || item.slug} href={blogHref(item)} className="group overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md">
                                         <div className="h-48 overflow-hidden bg-gray-100">
                                             {item.image ? (
-                                                <img src={item.image} alt={item.title || 'Blog'} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                                                <img src={item.image} alt={item.title ? `${item.title} - Gau Krishna` : 'Gau Krishna Blog'} loading="lazy" decoding="async" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
                                             ) : (
                                                 <div className="flex h-full items-center justify-center text-sm text-gray-400">No image</div>
                                             )}
