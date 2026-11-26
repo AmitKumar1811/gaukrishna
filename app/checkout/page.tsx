@@ -8,14 +8,14 @@ import { Button } from '@/components/ui/button'
 import { AlertTriangle, Banknote, Check, CreditCard } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { 
-  getAllAddresses, 
-  createAddress, 
-  editAddress, 
-  removeAddress, 
-  placeOrderFromCart, 
+import {
+  getAllAddresses,
+  createAddress,
+  editAddress,
+  removeAddress,
+  placeOrderFromCart,
   buyNow,
-  createPaymentOrder, 
+  createPaymentOrder,
   verifyPayment,
   checkStock,
   getProductById,
@@ -198,13 +198,13 @@ function CheckoutForm() {
 
   const displayItems = isBuyNow
     ? (buyNowProduct ? [{
-        productId: buyNowResolvedProductId,
-        variantId: buyNowResolvedVariantId,
-        productName: buyNowProduct.name || buyNowProduct.title || 'Product',
-        size: buyNowSize,
-        price: buyNowUnitPrice,
-        quantity: buyNowQuantity
-      }] : [])
+      productId: buyNowResolvedProductId,
+      variantId: buyNowResolvedVariantId,
+      productName: buyNowProduct.name || buyNowProduct.title || 'Product',
+      size: buyNowSize,
+      price: buyNowUnitPrice,
+      quantity: buyNowQuantity
+    }] : [])
     : items
 
   const displayTotalPrice = isBuyNow
@@ -598,7 +598,7 @@ function CheckoutForm() {
       const rpAmount = orderRes?.data?.amount || orderRes?.amount
       const rpCurrency = orderRes?.data?.currency || orderRes?.currency || 'INR'
 
-      const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || orderRes?.data?.key || orderRes?.key || ''
+      const razorpayKey = process.env.NEXT_PRIVATE_RAZORPAY_KEY_ID || orderRes?.data?.key || orderRes?.key || ''
       if (!razorpayKey) {
         throw new Error('Payment gateway key is not configured')
       }
@@ -1021,11 +1021,10 @@ function CheckoutForm() {
                     <button
                       type="button"
                       onClick={() => setPaymentMethod('PREPAID')}
-                      className={`flex items-start gap-3 p-4 rounded-lg border text-left transition-all ${
-                        paymentMethod === 'PREPAID'
+                      className={`flex items-start gap-3 p-4 rounded-lg border text-left transition-all ${paymentMethod === 'PREPAID'
                           ? 'border-primary ring-2 ring-primary/20 bg-primary/5'
                           : 'border-border hover:border-primary/40'
-                      }`}
+                        }`}
                     >
                       <CreditCard className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
@@ -1040,11 +1039,10 @@ function CheckoutForm() {
                     <button
                       type="button"
                       onClick={() => setPaymentMethod('COD')}
-                      className={`flex items-start gap-3 p-4 rounded-lg border text-left transition-all ${
-                        paymentMethod === 'COD'
+                      className={`flex items-start gap-3 p-4 rounded-lg border text-left transition-all ${paymentMethod === 'COD'
                           ? 'border-primary ring-2 ring-primary/20 bg-primary/5'
                           : 'border-border hover:border-primary/40'
-                      }`}
+                        }`}
                     >
                       <Banknote className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
