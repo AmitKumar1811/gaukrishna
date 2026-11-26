@@ -598,7 +598,7 @@ function CheckoutForm() {
       const rpAmount = orderRes?.data?.amount || orderRes?.amount
       const rpCurrency = orderRes?.data?.currency || orderRes?.currency || 'INR'
 
-      const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || orderRes?.data?.key || orderRes?.key || ''
+      const razorpayKey = process.env.RAZORPAY_KEY_ID || orderRes?.data?.key || orderRes?.key || ''
       if (!razorpayKey) {
         throw new Error('Payment gateway key is not configured')
       }
