@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Facebook, Instagram, Mail, Twitter, ChevronDown, ChevronUp } from 'lucide-react'
+import { Facebook, Instagram, Mail, ChevronDown, ChevronUp } from 'lucide-react'
 import { useState } from 'react'
 import Image from 'next/image'
 
@@ -141,10 +141,31 @@ export function Footer() {
               </Link>
 
               <div className="flex justify-center md:justify-start gap-4">
-                <a href="#" className="bg-[#d0c689] p-2.5 rounded-full text-[#1a5f48] hover:scale-110 transition-transform shadow-sm" aria-label="Facebook"><Facebook size={18} /></a>
-                <a href="#" className="bg-[#d0c689] p-2.5 rounded-full text-[#1a5f48] hover:scale-110 transition-transform shadow-sm" aria-label="Instagram"><Instagram size={18} /></a>
-                <a href="#" className="bg-[#d0c689] p-2.5 rounded-full text-[#1a5f48] hover:scale-110 transition-transform shadow-sm" aria-label="Mail"><Mail size={18} /></a>
-                <a href="#" className="bg-[#d0c689] p-2.5 rounded-full text-[#1a5f48] hover:scale-110 transition-transform shadow-sm" aria-label="Twitter"><Twitter size={18} /></a>
+                <a
+                  href="https://www.facebook.com/ram.rasoi.2025"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-[#d0c689] p-2.5 rounded-full text-[#1a5f48] hover:scale-110 transition-transform shadow-sm"
+                  aria-label="Facebook"
+                >
+                  <Facebook size={18} />
+                </a>
+                <a
+                  href="https://www.instagram.com/ram_rasoi_chywanprash/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-[#d0c689] p-2.5 rounded-full text-[#1a5f48] hover:scale-110 transition-transform shadow-sm"
+                  aria-label="Instagram"
+                >
+                  <Instagram size={18} />
+                </a>
+                <a
+                  href="mailto:gaukrishnaenterprises@gmail.com"
+                  className="bg-[#d0c689] p-2.5 rounded-full text-[#1a5f48] hover:scale-110 transition-transform shadow-sm"
+                  aria-label="Email gaukrishnaenterprises@gmail.com"
+                >
+                  <Mail size={18} />
+                </a>
               </div>
             </div>
           </div>

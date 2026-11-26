@@ -5,6 +5,7 @@ import './globals.css'
 import { CartProvider } from '@/lib/cart-context'
 import StoreProvider from './StoreProvider'
 import { ClientLayout } from './client-layout'
+import { Analytics } from "@vercel/analytics/next"
 
 const _geist = Geist({ subsets: ['latin'] })
 const _geistMono = Geist_Mono({ subsets: ['latin'] })
@@ -32,6 +33,7 @@ export default function RootLayout({
             <ClientLayout>{children}</ClientLayout>
           </CartProvider>
         </StoreProvider>
+        <Analytics />
       </body>
     </html>
   )
