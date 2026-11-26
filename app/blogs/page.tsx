@@ -2,6 +2,8 @@ import { Footer } from '@/components/footer'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'Blog - Gau Krishna',
   description: 'Read the latest updates, wellness tips, and Ayurvedic insights from Gau Krishna. Learn how to enrich your lifestyle naturally.',
