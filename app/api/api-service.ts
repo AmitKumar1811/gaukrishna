@@ -226,7 +226,7 @@ export const updateUserProfileData = async (data: any) => {
     }
 };
 
-export const createContact = async (data: { name: string; email: string; subject: string; message: string }) => {
+export const createContact = async (data: { name: string; email: string; phone: string; subject: string; message: string }) => {
     try {
         const response = await apiClient.post(CONTACTS, data);
         return response.data;

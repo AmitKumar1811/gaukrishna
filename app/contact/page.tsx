@@ -4,10 +4,14 @@ import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { Footer } from '@/components/footer'
 import { createContact } from '@/app/api/api-service'
+import { IndianPhoneInput } from '@/components/ui/indian-phone-input'
+import { normalizeIndianPhone, validateIndianPhone } from '@/lib/validation'
 
 export default function ContactPage() {
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
+    const [phone, setPhone] = useState('')
+    const [phoneError, setPhoneError] = useState<string | undefined>(undefined)
     const [subject, setSubject] = useState('')
     const [message, setMessage] = useState('')
 
@@ -15,13 +19,34 @@ export default function ContactPage() {
     const [error, setError] = useState<string | null>(null)
     const [success, setSuccess] = useState<string | null>(null)
 
+    const handlePhoneChange = (val: string) => {
+        setPhone(val)
+        const trimmed = val.trim()
+        if (trimmed && !/^[+]?[\d\s()-]+$/.test(trimmed)) {
+            setPhoneError('Phone number can only contain digits')
+            return
+        }
+        if (phoneError) {
+            setPhoneError(validateIndianPhone(val))
+        }
+    }
+
+    const handlePhoneBlur = () => {
+        setPhoneError(validateIndianPhone(phone))
+    }
+
     const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         setError(null)
         setSuccess(null)
 
-        if (!name.trim() || !email.trim() || !subject.trim() || !message.trim()) {
-            setError('Please fill in all fields.')
+        const phoneErr = validateIndianPhone(phone)
+        if (phoneErr) {
+            setPhoneError(phoneErr)
+        }
+
+        if (!name.trim() || !email.trim() || !subject.trim() || !message.trim() || phoneErr) {
+            setError(phoneErr || 'Please fill in all fields.')
             return
         }
 
@@ -30,12 +55,15 @@ export default function ContactPage() {
             await createContact({
                 name: name.trim(),
                 email: email.trim(),
+                phone: normalizeIndianPhone(phone),
                 subject: subject.trim(),
                 message: message.trim(),
             })
             setSuccess('Thanks! Your message has been sent.')
             setName('')
             setEmail('')
+            setPhone('')
+            setPhoneError(undefined)
             setSubject('')
             setMessage('')
         } catch (err: any) {
@@ -55,23 +83,32 @@ export default function ContactPage() {
                         <div className="space-y-8">
                             <div>
                                 <h3 className="text-xl font-bold text-gray-900 mb-2">Office Address</h3>
-                                <p className="text-gray-600">
-                                    Sector 44, Gurugram<br />
-                                    Haryana, India - 122003
+                                <p className="text-gray-600 leading-relaxed">
+                                    <strong>Gau Krishna Enterprises</strong><br />
+                                    411 Ground Floor, Fatehabad Road,<br />
+                                    Dhingsara, Fatehabad, Haryana 125053
                                 </p>
                             </div>
                             <div>
                                 <h3 className="text-xl font-bold text-gray-900 mb-2">Email Us</h3>
-                                <p className="text-gray-600"><a href="mailto:support@gaukrishna.com">support@gaukrishna.com</a></p>
+                                <p className="text-gray-600">
+                                    <a href="mailto:gaukrishnaenterprises@gmail.com" className="hover:text-[#1a5f48] hover:underline">
+                                        gaukrishnaenterprises@gmail.com
+                                    </a>
+                                </p>
                             </div>
                             <div>
                                 <h3 className="text-xl font-bold text-gray-900 mb-2">Call Us</h3>
-                                <p className="text-gray-600">+91 98765-43210</p>
-                                <p className="text-sm text-gray-500">(Mon-Sat: 10AM - 7PM)</p>
+                                <p className="text-gray-600">
+                                    <a href="tel:+919728930001" className="hover:text-[#1a5f48] hover:underline font-medium">
+                                        +91 97289 30001
+                                    </a>
+                                </p>
+                                <p className="text-sm text-gray-500 mt-1">(Open Daily • Closes 11 PM)</p>
                             </div>
                         </div>
 
-                        <form className="space-y-4" onSubmit={onSubmit}>
+                        <form className="space-y-4" onSubmit={onSubmit} noValidate>
                             {error ? (
                                 <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                                     {error}
@@ -101,6 +138,20 @@ export default function ContactPage() {
                                 autoComplete="email"
                                 className="w-full px-4 py-3 border border-gray-300 rounded focus:ring-[#1a5f48] focus:border-[#1a5f48]"
                             />
+                            <div>
+                                <IndianPhoneInput
+                                    id="contact-phone"
+                                    name="phone"
+                                    value={phone}
+                                    onChange={handlePhoneChange}
+                                    onBlur={handlePhoneBlur}
+                                    error={Boolean(phoneError)}
+                                    heightClassName="[&_.react-tel-input_.form-control]:!h-12"
+                                    placeholder="Your Phone Number"
+                                    required
+                                />
+                                {phoneError && <p className="text-sm text-red-600 mt-1">{phoneError}</p>}
+                            </div>
                             <input
                                 type="text"
                                 placeholder="Subject"
