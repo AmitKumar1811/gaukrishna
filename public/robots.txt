@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /checkout
+Disallow: /cart
+Disallow: /profile/
+Disallow: /login
+Disallow: /order-success
+
+Sitemap: https://gaukrishna.in/sitemap.xml

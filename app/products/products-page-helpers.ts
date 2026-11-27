@@ -75,22 +75,38 @@ export function getProductsPageTitle(query: ProductsPageQuery, products: Product
   }
 
   if (query.category) {
+    const lower = query.category.toLowerCase()
     const normalized = query.category.charAt(0).toUpperCase() + query.category.slice(1).toLowerCase()
-    if (query.category.toLowerCase() === 'combo') return 'Health Combos'
-    if (query.category.toLowerCase() === 'atta') return 'Premium Atta'
+    if (lower === 'combo') return 'Health Combos'
+    if (lower === 'atta') return 'Premium Atta'
+    if (lower === 'ghee') return 'A2 Desi & Gir Cow Bilona Ghee'
+    if (lower === 'chyawanprash') return 'Ram Rasoi & Gau Krishna Kesar Yukt Chyawanprash'
+    if (lower === 'oil' || lower === 'oils') return 'Wood Pressed Groundnut & Virgin Coconut Oils'
+    if (lower === 'dup') return 'Panchgavya Dhoop Batti'
     return normalized
   }
 
   if (query.tag) return query.tag.charAt(0).toUpperCase() + query.tag.slice(1)
   if (query.search) return `Search Results for "${query.search}"`
-  return 'All Products'
+  return 'All Swadeshi & Ayurvedic Products'
 }
 
 export function getProductsPageDescription(category?: string) {
-  if (category === 'ghee') return 'Pure A2 Desi Cow Ghee made from traditional Bilona method.'
-  if (category === 'oils') return 'Cold-pressed oils extracted using traditional wood-pressing technique.'
-  if (category === 'atta') return 'Freshly stone-ground flour from premium grains.'
-  return 'Premium A2 ghee, cold-pressed oils, and healthy staples sourced directly from farms.'
+  const lower = (category || '').toLowerCase()
+  if (lower === 'ghee') {
+    return 'Buy pure A2 Desi & Gir Cow Bilona Ghee online directly from Gau Krishna (Dhingsara). Check 1kg price, nutrition, and A2 cow ghee health benefits.'
+  }
+  if (lower === 'chyawanprash') {
+    return 'Buy Gau Krishna & Ram Rasoi Kesar Yukt Chyawanprash (कृष्णा च्यवनप्राश) online. Check ingredients, 1kg price, reviews, and immunity benefits.'
+  }
+  if (lower === 'oil' || lower === 'oils') {
+    return 'Shop Wood Pressed Groundnut Oil and Virgin Coconut Oil (for cooking & face/skin care) extracted without chemicals using traditional kolhu methods.'
+  }
+  if (lower === 'dup') {
+    return 'Natural Panchgavya Dhoop Batti made with desi cow dung, ghee, and pure herbs for clean daily pooja.'
+  }
+  if (lower === 'atta') return 'Freshly stone-ground flour from premium grains.'
+  return 'Buy Gau Krishna & Ram Rasoi Chyawanprash, A2 Gir Cow Bilona Ghee, Virgin Coconut Oil, Wood Pressed Groundnut Oil, and Panchgavya Dhoop Batti online.'
 }
 
 export function computeProductsPagination(opts: {

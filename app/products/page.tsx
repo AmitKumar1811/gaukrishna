@@ -22,10 +22,22 @@ interface ProductsPageProps {
 export async function generateMetadata({ searchParams }: ProductsPageProps): Promise<Metadata> {
   const resolvedSearchParams = (await searchParams) as SearchParamsRecord
   const query = parseProductsPageQuery(resolvedSearchParams)
-  
+  const title = `${getProductsPageTitle(query, [])} - Gau Krishna`
+  const description = getProductsPageDescription(query.category)
+  const canonical = query.category ? `/products?category=${encodeURIComponent(query.category)}` : '/products'
+
   return {
-    title: getProductsPageTitle(query, []) + ' - Gau Krishna',
-    description: getProductsPageDescription(query.category),
+    title,
+    description,
+    alternates: {
+      canonical,
+    },
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+      images: [{ url: '/images/a2-ghee.webp', alt: title }],
+    },
   }
 }
 
