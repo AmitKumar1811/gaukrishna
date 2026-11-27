@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { getOrderById } from '@/app/api/api-service'
+import { trackOrderByReference } from '@/app/api/api-service'
 import { Footer } from '@/components/footer'
 import { Loader2, ExternalLink, Package } from 'lucide-react'
 import { toast } from 'sonner'
@@ -26,7 +26,7 @@ function TrackOrderContent() {
             }
             setIsLoading(true)
             try {
-                const data = await getOrderById(orderId)
+                const data = await trackOrderByReference(orderId)
                 setOrder(data)
             } catch (error) {
                 console.error('Failed to fetch order:', error)
@@ -50,10 +50,20 @@ function TrackOrderContent() {
     }
 
     if (order) {
-        const waybill = order.delhiveryWaybill || order.shipmentWaybill
-        const status = order.delhiveryShipmentStatus || order.orderStatus || 'Processing'
+        const waybill = order.waybill || order.delhiveryWaybill || order.shipmentWaybill
+        const status =
+            (order.deliveryStatus && order.deliveryStatus !== 'Pending' ? order.deliveryStatus : null) ||
+            order.delhiveryShipmentStatus ||
+            order.orderStatus ||
+            'Processing'
         const displayStatus = status.charAt(0).toUpperCase() + status.slice(1)
         const trackingUrl = waybill ? `https://www.delhivery.com/track/package/${waybill}` : null
+        const resolvedOrderId = order.orderId || order._id
+        const displayOrderRef =
+            order.customOrderId ||
+            order.referenceNo ||
+            order.razorpayOrderId ||
+            (resolvedOrderId ? resolvedOrderId.slice(-6) : waybill || '')
 
         return (
             <div className="max-w-2xl mx-auto px-4 py-16 text-center">
@@ -63,7 +73,7 @@ function TrackOrderContent() {
                     </div>
                     
                     <h1 className="text-3xl font-bold font-serif text-gray-900 mb-2">Order Tracking</h1>
-                    <p className="text-gray-500 mb-8">Order #{order.customOrderId || order.razorpayOrderId || order._id?.slice(-6)}</p>
+                    <p className="text-gray-500 mb-8">Order #{displayOrderRef}</p>
 
                     <div className="bg-gray-50 rounded-xl p-6 mb-8 text-left">
                         <div className="grid grid-cols-2 gap-4">
@@ -113,7 +123,7 @@ function TrackOrderContent() {
                     )}
                     
                     <div className="mt-8">
-                        <Link href={`/profile/orders/${order._id}`} className="text-[#1a5f48] hover:underline text-sm">
+                        <Link href={resolvedOrderId ? `/profile/orders/${resolvedOrderId}` : '/profile/orders'} className="text-[#1a5f48] hover:underline text-sm">
                             ← Back to Order Details
                         </Link>
                     </div>

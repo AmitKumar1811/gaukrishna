@@ -256,6 +256,17 @@ export const getOrderById = async (id: string) => {
     }
 };
 
+export const trackOrderByReference = async (reference: string) => {
+    try {
+        const cleanRef = encodeURIComponent(reference.trim());
+        const response = await apiClient.get(`${ORDERS}/track/${cleanRef}`);
+        return response.data;
+    } catch (error) {
+        console.error("❌ Error tracking order:", error);
+        throw error;
+    }
+};
+
 export const getAllBlogs = async () => {
     try {
         const response = await apiClient.get('/blogs');
