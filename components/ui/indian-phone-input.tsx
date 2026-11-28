@@ -97,7 +97,7 @@ export function IndianPhoneInput({
   return (
     <div
       className={cn(
-        '[&_.react-tel-input_.form-control]:!w-full [&_.react-tel-input_.form-control]:!pl-12 [&_.react-tel-input_.form-control]:!text-base md:[&_.react-tel-input_.form-control]:!text-sm [&_.react-tel-input_.form-control]:!rounded-md [&_.react-tel-input_.form-control]:!border-gray-200 [&_.react-tel-input_.form-control]:!bg-white [&_.react-tel-input_.form-control]:!shadow-none [&_.react-tel-input_.flag-dropdown]:!rounded-l-md [&_.react-tel-input_.flag-dropdown]:!border-gray-200 [&_.react-tel-input_.flag-dropdown]:!bg-transparent [&_.react-tel-input_.selected-flag]:!bg-transparent [&_.react-tel-input_.selected-flag]:!pl-4 [&_.react-tel-input_.country-list]:!z-30',
+        '[&_.react-tel-input_.form-control]:!w-full [&_.react-tel-input_.form-control]:!pl-12 [&_.react-tel-input_.form-control]:!text-base md:[&_.react-tel-input_.form-control]:!text-sm [&_.react-tel-input_.form-control]:!rounded-md [&_.react-tel-input_.form-control]:!border-gray-200 [&_.react-tel-input_.form-control]:!bg-white [&_.react-tel-input_.form-control]:!shadow-none [&_.react-tel-input_.flag-dropdown]:!rounded-l-md [&_.react-tel-input_.flag-dropdown]:!border-gray-200 [&_.react-tel-input_.flag-dropdown]:!bg-transparent [&_.react-tel-input_.flag-dropdown]:!cursor-default [&_.react-tel-input_.selected-flag]:!bg-transparent [&_.react-tel-input_.selected-flag]:!pl-3 [&_.react-tel-input_.selected-flag]:!cursor-default',
         heightClassName,
         error
           ? '[&_.react-tel-input_.form-control]:!border-red-500 [&_.react-tel-input_.flag-dropdown]:!border-red-500'
@@ -107,6 +107,7 @@ export function IndianPhoneInput({
       <PhoneInput
         country="in"
         onlyCountries={['in']}
+        disableDropdown
         countryCodeEditable={false}
         enableLongNumbers={subscriberDigits.length > 10}
         value={controlledValue}

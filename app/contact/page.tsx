@@ -98,13 +98,25 @@ export default function ContactPage() {
                                 </p>
                             </div>
                             <div>
-                                <h3 className="text-xl font-bold text-gray-900 mb-2">Call Us</h3>
+                                <h3 className="text-xl font-bold text-gray-900 mb-2">Call &amp; WhatsApp</h3>
                                 <p className="text-gray-600">
                                     <a href="tel:+919728930001" className="hover:text-[#1a5f48] hover:underline font-medium">
                                         +91 97289 30001
                                     </a>
+                                    {' · '}
+                                    <a href="tel:+919996990290" className="hover:text-[#1a5f48] hover:underline font-medium">
+                                        +91 99969-90290
+                                    </a>
                                 </p>
                                 <p className="text-sm text-gray-500 mt-1">(Open Daily • Closes 11 PM)</p>
+                                <a
+                                    href="https://wa.me/919996990290?text=Namaste%20Gau%20Krishna%2C%20I%20need%20help."
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-lg bg-[#25D366] hover:bg-[#1ebe5d] text-white text-sm font-semibold transition-colors shadow-sm"
+                                >
+                                    WhatsApp Our Agent (+91 99969-90290)
+                                </a>
                             </div>
                         </div>
 

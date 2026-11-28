@@ -4,8 +4,8 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import PhoneInput from "react-phone-input-2"
-import "react-phone-input-2/lib/style.css"
+import { IndianPhoneInput } from "@/components/ui/indian-phone-input"
+import { normalizeIndianPhone, validateIndianPhone } from "@/lib/validation"
 import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { useDispatch } from "react-redux"
@@ -28,10 +28,11 @@ import {
     FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 // @ts-ignore
 import { signInWithGoogle } from "@/lib/firebaseAuth"
-import { loginUser, registerUser, forgotPasswordUser, googleLoginUser } from "@/app/api/auth-service"
+import { loginUser, registerUser, forgotPasswordUser, resetPasswordWithOtp, googleLoginUser } from "@/app/api/auth-service"
 
 const loginSchema = z.object({
     email: z.string().email({ message: "Invalid email address" }),
@@ -41,7 +42,15 @@ const loginSchema = z.object({
 const registerSchema = z.object({
     fullName: z.string().min(2, { message: "Name must be at least 2 characters" }),
     email: z.string().email({ message: "Invalid email address" }),
-    phone: z.string().min(10, { message: "Phone number is required" }),
+    phone: z.string().superRefine((val, ctx) => {
+        const err = validateIndianPhone(val)
+        if (err) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: err,
+            })
+        }
+    }),
     password: z.string().min(6, { message: "Password must be at least 6 characters" }),
 })
 
@@ -49,9 +58,21 @@ const forgotPasswordSchema = z.object({
     email: z.string().email({ message: "Invalid email address" }),
 })
 
+const resetPasswordSchema = z
+    .object({
+        otp: z.string().regex(/^\d{6}$/, { message: "Please enter the 6-digit OTP" }),
+        password: z.string().min(6, { message: "Password must be at least 6 characters" }),
+        confirmPassword: z.string().min(6, { message: "Please confirm your password" }),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+        message: "Passwords do not match",
+        path: ["confirmPassword"],
+    })
+
 type LoginValues = z.infer<typeof loginSchema>
 type RegisterValues = z.infer<typeof registerSchema>
 type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>
+type ResetPasswordValues = z.infer<typeof resetPasswordSchema>
 
 export function AuthForm() {
     const router = useRouter()
@@ -61,6 +82,8 @@ export function AuthForm() {
     const dispatch = useDispatch()
     const [activeTab, setActiveTab] = useState<"login" | "register">("register")
     const [isForgotPassword, setIsForgotPassword] = useState(false)
+    const [resetStep, setResetStep] = useState<"email" | "otp">("email")
+    const [resetEmail, setResetEmail] = useState("")
     const [showPassword, setShowPassword] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
 
@@ -86,6 +109,15 @@ export function AuthForm() {
         resolver: zodResolver(forgotPasswordSchema),
         defaultValues: {
             email: "",
+        },
+    })
+
+    const resetPasswordForm = useForm<ResetPasswordValues>({
+        resolver: zodResolver(resetPasswordSchema),
+        defaultValues: {
+            otp: "",
+            password: "",
+            confirmPassword: "",
         },
     })
 
@@ -118,7 +150,7 @@ export function AuthForm() {
             const payload = {
                 name: data.fullName,
                 email: data.email,
-                phone: data.phone,
+                phone: normalizeIndianPhone(data.phone),
                 password: data.password
             }
             const res = await registerUser(payload)
@@ -135,12 +167,50 @@ export function AuthForm() {
     async function onForgotPasswordSubmit(data: ForgotPasswordValues) {
         setIsLoading(true)
         try {
-            await forgotPasswordUser(data.email)
-            toast.success("Password reset link sent to your email.")
-            setIsForgotPassword(false)
+            await forgotPasswordUser(data.email.trim())
+            setResetEmail(data.email.trim())
+            setResetStep("otp")
+            resetPasswordForm.reset({ otp: "", password: "", confirmPassword: "" })
+            toast.success("6-digit OTP sent to your email.")
         } catch (error: any) {
             console.error("Forgot Password Error:", error)
-            toast.error(error.response?.data?.message || "Failed to send reset link.")
+            toast.error(error.response?.data?.message || "Failed to send OTP.")
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    async function onResetPasswordSubmit(data: ResetPasswordValues) {
+        setIsLoading(true)
+        try {
+            await resetPasswordWithOtp({
+                email: resetEmail,
+                otp: data.otp,
+                password: data.password,
+            })
+            toast.success("Password reset successfully! Please login.")
+            setIsForgotPassword(false)
+            setResetStep("email")
+            setResetEmail("")
+            setActiveTab("login")
+            forgotPasswordForm.reset()
+            resetPasswordForm.reset()
+        } catch (error: any) {
+            console.error("Reset Password Error:", error)
+            toast.error(error.response?.data?.message || "Invalid or expired OTP.")
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    async function handleResendOtp() {
+        if (!resetEmail || isLoading) return
+        setIsLoading(true)
+        try {
+            await forgotPasswordUser(resetEmail)
+            toast.success("New 6-digit OTP sent to your email.")
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Failed to resend OTP.")
         } finally {
             setIsLoading(false)
         }
@@ -227,7 +297,10 @@ export function AuthForm() {
                 <div className="mb-8">
                     <Button
                         variant="ghost"
-                        onClick={() => setIsForgotPassword(false)}
+                        onClick={() => {
+                            setIsForgotPassword(false)
+                            setResetStep("email")
+                        }}
                         className="mb-4 pl-0 hover:bg-transparent hover:text-[#1A4D2E]"
                     >
                         <ArrowLeft className="mr-2 h-4 w-4" /> Back to Login
@@ -241,35 +314,142 @@ export function AuthForm() {
                         स्मृति-पुनर्प्राप्तिः
                     </motion.h1>
                     <p className="text-muted-foreground mt-2 text-sm">
-                        Enter your email to receive a password reset link
+                        {resetStep === "email"
+                            ? "Enter your email to receive a 6-digit OTP"
+                            : `Enter the 6-digit OTP sent to ${resetEmail}`}
                     </p>
                 </div>
 
-                <Form {...forgotPasswordForm}>
-                    <form onSubmit={forgotPasswordForm.handleSubmit(onForgotPasswordSubmit)} className="space-y-4">
-                        <FormField
-                            control={forgotPasswordForm.control}
-                            name="email"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="text-sm font-semibold">Email</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            placeholder="Johndoe@gmail.com"
-                                            className="h-11 rounded-md border-gray-200 focus:border-[#1A4D2E] focus:ring-[#1A4D2E] bg-white transition-colors"
-                                            {...field}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <Button type="submit" size="lg" className="w-full h-11 rounded-md text-base bg-[#1A4D2E] hover:bg-[#143D24] text-white font-medium shadow-sm transition-transform active:scale-[0.98]" disabled={isLoading}>
-                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Send Reset Link
-                        </Button>
-                    </form>
-                </Form>
+                {resetStep === "email" ? (
+                    <Form {...forgotPasswordForm}>
+                        <form onSubmit={forgotPasswordForm.handleSubmit(onForgotPasswordSubmit)} className="space-y-4">
+                            <FormField
+                                control={forgotPasswordForm.control}
+                                name="email"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-sm font-semibold">Email</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter your email"
+                                                className="h-11 rounded-md border-gray-200 focus:border-[#1A4D2E] focus:ring-[#1A4D2E] bg-white transition-colors"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <Button type="submit" size="lg" className="w-full h-11 rounded-md text-base bg-[#1A4D2E] hover:bg-[#143D24] text-white font-medium shadow-sm transition-transform active:scale-[0.98]" disabled={isLoading}>
+                                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Send 6-Digit OTP
+                            </Button>
+                        </form>
+                    </Form>
+                ) : (
+                    <Form {...resetPasswordForm}>
+                        <form onSubmit={resetPasswordForm.handleSubmit(onResetPasswordSubmit)} className="space-y-4">
+                            <FormField
+                                control={resetPasswordForm.control}
+                                name="otp"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-sm font-semibold">6-Digit OTP</FormLabel>
+                                        <FormControl>
+                                            <InputOTP
+                                                maxLength={6}
+                                                value={field.value}
+                                                onChange={field.onChange}
+                                                containerClassName="justify-between"
+                                            >
+                                                <InputOTPGroup className="w-full justify-between gap-2">
+                                                    {[0, 1, 2, 3, 4, 5].map((idx) => (
+                                                        <InputOTPSlot
+                                                            key={idx}
+                                                            index={idx}
+                                                            className="h-11 flex-1 rounded-md border border-gray-200 bg-white text-base font-bold"
+                                                        />
+                                                    ))}
+                                                </InputOTPGroup>
+                                            </InputOTP>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={resetPasswordForm.control}
+                                name="password"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-sm font-semibold">New Password</FormLabel>
+                                        <FormControl>
+                                            <div className="relative">
+                                                <Input
+                                                    type={showPassword ? "text" : "password"}
+                                                    placeholder="Enter new password"
+                                                    className="pr-12 h-11 rounded-md border-gray-200 focus:border-[#1A4D2E] focus:ring-[#1A4D2E] bg-white"
+                                                    {...field}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                    className="absolute right-4 top-3.5 text-muted-foreground hover:text-foreground focus:outline-none"
+                                                >
+                                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                                </button>
+                                            </div>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={resetPasswordForm.control}
+                                name="confirmPassword"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-sm font-semibold">Confirm Password</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type={showPassword ? "text" : "password"}
+                                                placeholder="Confirm new password"
+                                                className="h-11 rounded-md border-gray-200 focus:border-[#1A4D2E] focus:ring-[#1A4D2E] bg-white"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <Button type="submit" size="lg" className="w-full h-11 rounded-md text-base bg-[#1A4D2E] hover:bg-[#143D24] text-white font-medium shadow-sm transition-transform active:scale-[0.98]" disabled={isLoading}>
+                                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Verify OTP &amp; Reset Password
+                            </Button>
+
+                            <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setResetStep("email")}
+                                    className="hover:text-[#1A4D2E] hover:underline"
+                                >
+                                    Change email
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleResendOtp}
+                                    disabled={isLoading}
+                                    className="font-semibold text-[#1A4D2E] hover:underline disabled:opacity-50"
+                                >
+                                    Resend OTP
+                                </button>
+                            </div>
+                        </form>
+                    </Form>
+                )}
             </motion.div>
         )
     }
@@ -342,7 +522,7 @@ export function AuthForm() {
                                         <FormLabel className="text-sm font-semibold">Email</FormLabel>
                                         <FormControl>
                                             <Input
-                                                placeholder="Johndoe@gmail.com"
+                                                placeholder="Enter your email"
                                                 className="h-11 rounded-md border-gray-200 focus:border-[#1A4D2E] focus:ring-[#1A4D2E] bg-white"
                                                 {...field}
                                             />
@@ -361,7 +541,7 @@ export function AuthForm() {
                                             <div className="relative">
                                                 <Input
                                                     type={showPassword ? "text" : "password"}
-                                                    placeholder="At least 8 characters"
+                                                    placeholder="Enter your password"
                                                     className="pr-12 h-11 rounded-md border-gray-200 focus:border-[#1A4D2E] focus:ring-[#1A4D2E] bg-white transition-colors"
                                                     {...field}
                                                 />
@@ -412,7 +592,7 @@ export function AuthForm() {
                                         <FormLabel className="text-sm font-semibold">Full Name</FormLabel>
                                         <FormControl>
                                             <Input
-                                                placeholder="John Doe"
+                                                placeholder="Enter your full name"
                                                 className="h-11 rounded-md border-gray-200 focus:border-[#1A4D2E] focus:ring-[#1A4D2E] bg-white"
                                                 {...field}
                                             />
@@ -429,7 +609,7 @@ export function AuthForm() {
                                         <FormLabel className="text-sm font-semibold">Email</FormLabel>
                                         <FormControl>
                                             <Input
-                                                placeholder="Johndoe@gmail.com"
+                                                placeholder="Enter your email"
                                                 className="h-11 rounded-md border-gray-200 focus:border-[#1A4D2E] focus:ring-[#1A4D2E] bg-white"
                                                 {...field}
                                             />
@@ -441,23 +621,21 @@ export function AuthForm() {
                             <FormField
                                 control={registerForm.control}
                                 name="phone"
-                                render={({ field: { onChange, value } }) => (
+                                render={({ field: { onChange, onBlur, value }, fieldState }) => (
                                     <FormItem>
                                         <FormLabel className="text-sm font-semibold">Phone Number</FormLabel>
                                         <FormControl>
-                                            <div className="[&_.react-tel-input_.form-control]:!w-full [&_.react-tel-input_.form-control]:!h-11 [&_.react-tel-input_.form-control]:!pl-12 [&_.react-tel-input_.form-control]:!text-base [&_.react-tel-input_.form-control]:!rounded-md [&_.react-tel-input_.form-control]:!border-gray-200 [&_.react-tel-input_.form-control]:!bg-white [&_.react-tel-input_.form-control]:!shadow-none [&_.react-tel-input_.flag-dropdown]:!rounded-l-md [&_.react-tel-input_.flag-dropdown]:!border-gray-200 [&_.react-tel-input_.flag-dropdown]:!bg-transparent [&_.react-tel-input_.selected-flag]:!bg-transparent [&_.react-tel-input_.selected-flag]:!pl-4">
-                                                <PhoneInput
-                                                    country={'in'}
-                                                    value={value}
-                                                    onChange={onChange}
-                                                    inputProps={{
-                                                        required: true,
-                                                        name: 'phone',
-                                                        placeholder: 'Phone Number'
-                                                    }}
-                                                    specialLabel=""
-                                                />
-                                            </div>
+                                            <IndianPhoneInput
+                                                id="register-phone"
+                                                name="phone"
+                                                value={value}
+                                                onChange={onChange}
+                                                onBlur={onBlur}
+                                                error={Boolean(fieldState.error)}
+                                                heightClassName="[&_.react-tel-input_.form-control]:!h-11"
+                                                placeholder="Enter 10-digit mobile number"
+                                                required
+                                            />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -473,7 +651,7 @@ export function AuthForm() {
                                             <div className="relative">
                                                 <Input
                                                     type={showPassword ? "text" : "password"}
-                                                    placeholder="At least 8 characters"
+                                                    placeholder="Enter your password"
                                                     className="pr-12 h-11 rounded-md border-gray-200 focus:border-[#1A4D2E] focus:ring-[#1A4D2E] bg-white"
                                                     {...field}
                                                 />
