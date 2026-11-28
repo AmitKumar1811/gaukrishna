@@ -54,6 +54,16 @@ export const forgotPasswordUser = async (email: string) => {
     }
 };
 
+export const verifyResetOtp = async (data: { email: string; otp: string }) => {
+    try {
+        const response = await apiClient.post(`${AUTH}/verify-reset-otp`, data);
+        return response.data;
+    } catch (error) {
+        console.error("❌ Error verifying OTP:", error);
+        throw error;
+    }
+};
+
 export const resetPasswordWithOtp = async (data: { email: string; otp: string; password: string }) => {
     try {
         const response = await apiClient.post(`${AUTH}/reset-password`, data);

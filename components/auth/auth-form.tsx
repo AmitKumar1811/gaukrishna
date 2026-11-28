@@ -14,8 +14,10 @@ import {
     Loader2,
     Eye,
     EyeOff,
-    ArrowLeft
+    ArrowLeft,
+    CheckCircle2
 } from "lucide-react"
+import { REGEXP_ONLY_DIGITS } from "input-otp"
 import { motion, AnimatePresence } from "framer-motion"
 
 import { Button } from "@/components/ui/button"
@@ -32,7 +34,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 // @ts-ignore
 import { signInWithGoogle } from "@/lib/firebaseAuth"
-import { loginUser, registerUser, forgotPasswordUser, resetPasswordWithOtp, googleLoginUser } from "@/app/api/auth-service"
+import { loginUser, registerUser, forgotPasswordUser, verifyResetOtp, resetPasswordWithOtp, googleLoginUser } from "@/app/api/auth-service"
 
 const loginSchema = z.object({
     email: z.string().email({ message: "Invalid email address" }),
@@ -58,9 +60,12 @@ const forgotPasswordSchema = z.object({
     email: z.string().email({ message: "Invalid email address" }),
 })
 
+const verifyOtpSchema = z.object({
+    otp: z.string().regex(/^\d{6}$/, { message: "Please enter the 6-digit OTP" }),
+})
+
 const resetPasswordSchema = z
     .object({
-        otp: z.string().regex(/^\d{6}$/, { message: "Please enter the 6-digit OTP" }),
         password: z.string().min(6, { message: "Password must be at least 6 characters" }),
         confirmPassword: z.string().min(6, { message: "Please confirm your password" }),
     })
@@ -72,6 +77,7 @@ const resetPasswordSchema = z
 type LoginValues = z.infer<typeof loginSchema>
 type RegisterValues = z.infer<typeof registerSchema>
 type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>
+type VerifyOtpValues = z.infer<typeof verifyOtpSchema>
 type ResetPasswordValues = z.infer<typeof resetPasswordSchema>
 
 export function AuthForm() {
@@ -82,8 +88,9 @@ export function AuthForm() {
     const dispatch = useDispatch()
     const [activeTab, setActiveTab] = useState<"login" | "register">("register")
     const [isForgotPassword, setIsForgotPassword] = useState(false)
-    const [resetStep, setResetStep] = useState<"email" | "otp">("email")
+    const [resetStep, setResetStep] = useState<"email" | "otp" | "password">("email")
     const [resetEmail, setResetEmail] = useState("")
+    const [verifiedOtp, setVerifiedOtp] = useState("")
     const [showPassword, setShowPassword] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
 
@@ -112,10 +119,16 @@ export function AuthForm() {
         },
     })
 
+    const verifyOtpForm = useForm<VerifyOtpValues>({
+        resolver: zodResolver(verifyOtpSchema),
+        defaultValues: {
+            otp: "",
+        },
+    })
+
     const resetPasswordForm = useForm<ResetPasswordValues>({
         resolver: zodResolver(resetPasswordSchema),
         defaultValues: {
-            otp: "",
             password: "",
             confirmPassword: "",
         },
@@ -167,14 +180,36 @@ export function AuthForm() {
     async function onForgotPasswordSubmit(data: ForgotPasswordValues) {
         setIsLoading(true)
         try {
-            await forgotPasswordUser(data.email.trim())
-            setResetEmail(data.email.trim())
+            const cleanEmail = data.email.trim()
+            await forgotPasswordUser(cleanEmail)
+            setResetEmail(cleanEmail)
+            setVerifiedOtp("")
             setResetStep("otp")
-            resetPasswordForm.reset({ otp: "", password: "", confirmPassword: "" })
+            verifyOtpForm.reset({ otp: "" })
+            resetPasswordForm.reset({ password: "", confirmPassword: "" })
             toast.success("6-digit OTP sent to your email.")
         } catch (error: any) {
             console.error("Forgot Password Error:", error)
             toast.error(error.response?.data?.message || "Failed to send OTP.")
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    async function onVerifyOtpSubmit(data: VerifyOtpValues) {
+        setIsLoading(true)
+        try {
+            await verifyResetOtp({
+                email: resetEmail,
+                otp: data.otp,
+            })
+            setVerifiedOtp(data.otp)
+            setResetStep("password")
+            resetPasswordForm.reset({ password: "", confirmPassword: "" })
+            toast.success("OTP verified! Please enter your new password.")
+        } catch (error: any) {
+            console.error("OTP Verification Error:", error)
+            toast.error(error.response?.data?.message || "Invalid or expired OTP.")
         } finally {
             setIsLoading(false)
         }
@@ -185,15 +220,17 @@ export function AuthForm() {
         try {
             await resetPasswordWithOtp({
                 email: resetEmail,
-                otp: data.otp,
+                otp: verifiedOtp,
                 password: data.password,
             })
             toast.success("Password reset successfully! Please login.")
             setIsForgotPassword(false)
             setResetStep("email")
             setResetEmail("")
+            setVerifiedOtp("")
             setActiveTab("login")
             forgotPasswordForm.reset()
+            verifyOtpForm.reset()
             resetPasswordForm.reset()
         } catch (error: any) {
             console.error("Reset Password Error:", error)
@@ -208,6 +245,8 @@ export function AuthForm() {
         setIsLoading(true)
         try {
             await forgotPasswordUser(resetEmail)
+            setVerifiedOtp("")
+            verifyOtpForm.reset({ otp: "" })
             toast.success("New 6-digit OTP sent to your email.")
         } catch (error: any) {
             toast.error(error.response?.data?.message || "Failed to resend OTP.")
@@ -300,6 +339,7 @@ export function AuthForm() {
                         onClick={() => {
                             setIsForgotPassword(false)
                             setResetStep("email")
+                            setVerifiedOtp("")
                         }}
                         className="mb-4 pl-0 hover:bg-transparent hover:text-[#1A4D2E]"
                     >
@@ -316,12 +356,14 @@ export function AuthForm() {
                     <p className="text-muted-foreground mt-2 text-sm">
                         {resetStep === "email"
                             ? "Enter your email to receive a 6-digit OTP"
-                            : `Enter the 6-digit OTP sent to ${resetEmail}`}
+                            : resetStep === "otp"
+                                ? `Enter the 6-digit OTP sent to ${resetEmail}`
+                                : "Create a new password for your account"}
                     </p>
                 </div>
 
                 {resetStep === "email" ? (
-                    <Form {...forgotPasswordForm}>
+                    <Form key="step-email" {...forgotPasswordForm}>
                         <form onSubmit={forgotPasswordForm.handleSubmit(onForgotPasswordSubmit)} className="space-y-4">
                             <FormField
                                 control={forgotPasswordForm.control}
@@ -346,28 +388,31 @@ export function AuthForm() {
                             </Button>
                         </form>
                     </Form>
-                ) : (
-                    <Form {...resetPasswordForm}>
-                        <form onSubmit={resetPasswordForm.handleSubmit(onResetPasswordSubmit)} className="space-y-4">
+                ) : resetStep === "otp" ? (
+                    <Form key="step-otp" {...verifyOtpForm}>
+                        <form onSubmit={verifyOtpForm.handleSubmit(onVerifyOtpSubmit)} className="space-y-5">
                             <FormField
-                                control={resetPasswordForm.control}
+                                control={verifyOtpForm.control}
                                 name="otp"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="text-sm font-semibold">6-Digit OTP</FormLabel>
+                                        <FormLabel className="text-sm font-semibold">Verification Code</FormLabel>
                                         <FormControl>
                                             <InputOTP
                                                 maxLength={6}
+                                                pattern={REGEXP_ONLY_DIGITS}
+                                                autoFocus
+                                                autoComplete="one-time-code"
                                                 value={field.value}
                                                 onChange={field.onChange}
-                                                containerClassName="justify-between"
+                                                containerClassName="justify-between pt-1"
                                             >
-                                                <InputOTPGroup className="w-full justify-between gap-2">
+                                                <InputOTPGroup className="w-full justify-between gap-2 sm:gap-3">
                                                     {[0, 1, 2, 3, 4, 5].map((idx) => (
                                                         <InputOTPSlot
                                                             key={idx}
                                                             index={idx}
-                                                            className="h-11 flex-1 rounded-md border border-gray-200 bg-white text-base font-bold"
+                                                            className="h-12 flex-1 rounded-lg border border-gray-300 bg-white text-lg font-bold text-[#1A4D2E] shadow-xs first:rounded-lg last:rounded-lg"
                                                         />
                                                     ))}
                                                 </InputOTPGroup>
@@ -377,6 +422,41 @@ export function AuthForm() {
                                     </FormItem>
                                 )}
                             />
+
+                            <Button type="submit" size="lg" className="w-full h-11 rounded-md text-base bg-[#1A4D2E] hover:bg-[#143D24] text-white font-medium shadow-sm transition-transform active:scale-[0.98]" disabled={isLoading}>
+                                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Verify OTP
+                            </Button>
+
+                            <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setResetStep("email")
+                                        setVerifiedOtp("")
+                                    }}
+                                    className="hover:text-[#1A4D2E] hover:underline"
+                                >
+                                    Change email
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleResendOtp}
+                                    disabled={isLoading}
+                                    className="font-semibold text-[#1A4D2E] hover:underline disabled:opacity-50"
+                                >
+                                    Resend OTP
+                                </button>
+                            </div>
+                        </form>
+                    </Form>
+                ) : (
+                    <Form key="step-password" {...resetPasswordForm}>
+                        <form onSubmit={resetPasswordForm.handleSubmit(onResetPasswordSubmit)} className="space-y-4">
+                            <div className="flex items-center gap-2 rounded-lg bg-[#dcf0e8]/60 border border-[#1A4D2E]/20 px-3 py-2 text-xs font-medium text-[#1A4D2E]">
+                                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                                <span>OTP verified for {resetEmail}</span>
+                            </div>
 
                             <FormField
                                 control={resetPasswordForm.control}
@@ -388,7 +468,8 @@ export function AuthForm() {
                                             <div className="relative">
                                                 <Input
                                                     type={showPassword ? "text" : "password"}
-                                                    placeholder="Enter new password"
+                                                    autoComplete="new-password"
+                                                    placeholder="Enter new password (min 6 chars)"
                                                     className="pr-12 h-11 rounded-md border-gray-200 focus:border-[#1A4D2E] focus:ring-[#1A4D2E] bg-white"
                                                     {...field}
                                                 />
@@ -415,6 +496,7 @@ export function AuthForm() {
                                         <FormControl>
                                             <Input
                                                 type={showPassword ? "text" : "password"}
+                                                autoComplete="new-password"
                                                 placeholder="Confirm new password"
                                                 className="h-11 rounded-md border-gray-200 focus:border-[#1A4D2E] focus:ring-[#1A4D2E] bg-white"
                                                 {...field}
@@ -427,26 +509,8 @@ export function AuthForm() {
 
                             <Button type="submit" size="lg" className="w-full h-11 rounded-md text-base bg-[#1A4D2E] hover:bg-[#143D24] text-white font-medium shadow-sm transition-transform active:scale-[0.98]" disabled={isLoading}>
                                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Verify OTP &amp; Reset Password
+                                Reset Password
                             </Button>
-
-                            <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-                                <button
-                                    type="button"
-                                    onClick={() => setResetStep("email")}
-                                    className="hover:text-[#1A4D2E] hover:underline"
-                                >
-                                    Change email
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleResendOtp}
-                                    disabled={isLoading}
-                                    className="font-semibold text-[#1A4D2E] hover:underline disabled:opacity-50"
-                                >
-                                    Resend OTP
-                                </button>
-                            </div>
                         </form>
                     </Form>
                 )}
